@@ -1,0 +1,314 @@
+{
+  "positive": [
+    {
+      "text": "contact me at jane.doe@example.com for details",
+      "categories": [
+        "email"
+      ]
+    },
+    {
+      "text": "my work email is first.last+tag@sub.example.co.uk",
+      "categories": [
+        "email"
+      ]
+    },
+    {
+      "text": "send it to admin@my-company.io please",
+      "categories": [
+        "email"
+      ]
+    },
+    {
+      "text": "reach out: support@service.org",
+      "categories": [
+        "email"
+      ]
+    },
+    {
+      "text": "reach me, jane.doe at example dot com, soon",
+      "categories": [
+        "email"
+      ]
+    },
+    {
+      "text": "email: john [at] mailservice [dot] net",
+      "categories": [
+        "email"
+      ]
+    },
+    {
+      "text": "contact support (at) help-desk (dot) com today",
+      "categories": [
+        "email"
+      ]
+    },
+    {
+      "text": "call me at 9876543210",
+      "categories": [
+        "phone_in"
+      ]
+    },
+    {
+      "text": "call me at +91 98765 43210",
+      "categories": [
+        "phone_in"
+      ]
+    },
+    {
+      "text": "call me at +919876543210",
+      "categories": [
+        "phone_in"
+      ]
+    },
+    {
+      "text": "call me at 09876543210",
+      "categories": [
+        "phone_in"
+      ]
+    },
+    {
+      "text": "my number is 8123456789 for the delivery",
+      "categories": [
+        "phone_in"
+      ]
+    },
+    {
+      "text": "call +44 20 7946 0958 for support",
+      "categories": [
+        "phone"
+      ]
+    },
+    {
+      "text": "call +33 1 42 68 53 00 for support",
+      "categories": [
+        "phone"
+      ]
+    },
+    {
+      "text": "reach me at 555-123-4567",
+      "categories": [
+        "phone"
+      ]
+    },
+    {
+      "text": "call (555) 234-5678 anytime",
+      "categories": [
+        "phone"
+      ]
+    },
+    {
+      "text": "dial +49 30 1234 5678 for the Berlin office",
+      "categories": [
+        "phone"
+      ]
+    },
+    {
+      "text": "my ssn is 123-45-6789",
+      "categories": [
+        "ssn"
+      ]
+    },
+    {
+      "text": "ssn: 234-56-7890 on the form",
+      "categories": [
+        "ssn"
+      ]
+    },
+    {
+      "text": "social is 345-67-8901 for verification",
+      "categories": [
+        "ssn"
+      ]
+    },
+    {
+      "text": "card number 4111 1111 1111 1111 please",
+      "categories": [
+        "credit_card"
+      ]
+    },
+    {
+      "text": "mastercard 5500000000000004 on file",
+      "categories": [
+        "credit_card"
+      ]
+    },
+    {
+      "text": "amex 340000000000009 is on file",
+      "categories": [
+        "credit_card"
+      ]
+    },
+    {
+      "text": "discover card 6011111111111117 was charged",
+      "categories": [
+        "credit_card"
+      ]
+    },
+    {
+      "text": "diners club 30569309025904 expired",
+      "categories": [
+        "credit_card"
+      ]
+    },
+    {
+      "text": "card: 4111-1111-1111-1111",
+      "categories": [
+        "credit_card"
+      ]
+    },
+    {
+      "text": "my aadhaar number is 104332181962",
+      "categories": [
+        "aadhaar"
+      ]
+    },
+    {
+      "text": "aadhaar: 0013 3890 8383",
+      "categories": [
+        "aadhaar"
+      ]
+    },
+    {
+      "text": "uidai number 523400000005 on file",
+      "categories": [
+        "aadhaar"
+      ]
+    },
+    {
+      "text": "aadhaar card 7781-0000-0002",
+      "categories": [
+        "aadhaar"
+      ]
+    },
+    {
+      "text": "my aadhaar is 901200000008 for kyc",
+      "categories": [
+        "aadhaar"
+      ]
+    },
+    {
+      "text": "my PAN is ABCDE1234F for tax purposes",
+      "categories": [
+        "pan"
+      ]
+    },
+    {
+      "text": "pan card number: WXYZE5678K",
+      "categories": [
+        "pan"
+      ]
+    },
+    {
+      "text": "submit PAN ABCTY9087M with the form",
+      "categories": [
+        "pan"
+      ]
+    },
+    {
+      "text": "IFSC code is HDFC0001234 for the branch",
+      "categories": [
+        "ifsc"
+      ]
+    },
+    {
+      "text": "the ifsc is SBIN0005678 for this account",
+      "categories": [
+        "ifsc"
+      ]
+    },
+    {
+      "text": "branch IFSC: ICIC0009876 Mumbai",
+      "categories": [
+        "ifsc"
+      ]
+    },
+    {
+      "text": "passport number is M1234567 for verification",
+      "categories": [
+        "passport"
+      ]
+    },
+    {
+      "text": "my passport is Z9876543, please check",
+      "categories": [
+        "passport"
+      ]
+    },
+    {
+      "text": "passport no. A1122334 submitted",
+      "categories": [
+        "passport"
+      ]
+    },
+    {
+      "text": "my account number is 123456789012 for the transfer",
+      "categories": [
+        "bank_account"
+      ]
+    },
+    {
+      "text": "A/C No. 9988776655 for the refund",
+      "categories": [
+        "bank_account"
+      ]
+    },
+    {
+      "text": "bank account number 445566778899 added",
+      "categories": [
+        "bank_account"
+      ]
+    },
+    {
+      "text": "ac no 998877665544 linked",
+      "categories": [
+        "bank_account"
+      ]
+    },
+    {
+      "text": "email jane@example.com or call 9876543210, aadhaar 104332181962",
+      "categories": [
+        "aadhaar",
+        "email",
+        "phone_in"
+      ]
+    },
+    {
+      "text": "card 5500000000000004 and ssn 123-45-6789 on the same form",
+      "categories": [
+        "credit_card",
+        "ssn"
+      ]
+    },
+    {
+      "text": "passport number is M1234567, call me at +91 98765 43210",
+      "categories": [
+        "passport",
+        "phone_in"
+      ]
+    }
+  ],
+  "negative": [
+    "isbn 9780143127550 is the book code",
+    "isbn 9781234567897 is the book code",
+    "order id 1234567890123 was placed today",
+    "timestamp 20261003120000 recorded",
+    "sequence 202410031200001 generated",
+    "version 1.2.3.4.5.6.7.8.9.0.1.2 released",
+    "reference number 202410031200 recorded",
+    "reference number 123456789012 recorded",
+    "the warehouse code is HDFC0001234 this week",
+    "the asset tag is M1234567 on the laptop",
+    "your order id is 220005512345 and will ship tomorrow",
+    "my test number 4111111111111112 failed verification",
+    "tracking number 123456789012345 is in transit",
+    "what is the capital of France?",
+    "flight AA1234 departs at 9am",
+    "the meeting is in room B204 at noon",
+    "invoice total was 4500 rupees",
+    "model number XJ-4000 is discontinued",
+    "my account number is on file from before; by the way, the order id is 220005512345 and ships tomorrow",
+    "zip code 400001 for the Mumbai office",
+    "employee id E00123456 was onboarded today",
+    "the product sku is 123456789 in stock"
+  ]
+}

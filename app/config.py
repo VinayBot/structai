@@ -1,0 +1,69 @@
+from functools import lru_cache
+from typing import Literal
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+    env: str = "development"
+
+    # Auth
+    jwt_secret: str = "dev-insecure-secret-change-me"
+    jwt_algorithm: str = "HS256"
+    jwt_access_expire_min: int = 15
+    jwt_refresh_expire_days: int = 7
+
+    # Database
+    database_url: str = "sqlite+aiosqlite:///./data/structai.db"
+
+    # Model providers
+    ollama_base_url: str = "http://localhost:11434"
+    ollama_fast_model: str = "qwen2.5:7b-instruct"
+    ollama_smart_model: str = "qwen2.5:7b-instruct"
+
+    groq_api_key: str = ""
+    groq_fast_model: str = "openai/gpt-oss-20b"
+    groq_smart_model: str = "openai/gpt-oss-120b"
+
+    # Structured answers
+    structured_max_attempts: int = 3
+    structured_timeout_seconds: float = 30.0
+
+    # Guardrails / abuse limits
+    rate_limit_per_min: int = 20
+    daily_quota_user: int = 30
+    pii_mode: Literal["redact", "block"] = "redact"
+    email_check_mx: bool = True
+    email_check_mx_timeout_seconds: float = 3.0
+    email_disposable_domains_file: str = ""
+
+    # Persistence / uploads
+    upload_dir: str = "./data/uploads"
+    max_upload_size_bytes: int = 10 * 1024 * 1024
+
+    # Observability
+    otel_exporter_otlp_endpoint: str = ""
+
+    # Web / CORS
+    cors_origins: str = "http://localhost:5173,http://localhost:8000"
+
+    # MCP server - credentials for the StructAI account the MCP server acts as.
+    # Issue these with scripts/mcp_issue_token.py; see docs/MCP_SERVER.md.
+    mcp_access_token: str = ""
+    mcp_refresh_token: str = ""
+
+    # Build info (GET /health) - normally auto-detected from `git`; set these to
+    # override in environments without a .git directory (e.g. a built container).
+    git_commit: str = ""
+    build_time: str = ""
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+
+
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()

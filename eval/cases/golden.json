@@ -1,0 +1,201 @@
+[
+  {
+    "id": "capital-france",
+    "category": "facts",
+    "prompt": "What is the capital of France? Respond with just the capital city name.",
+    "schema_def": {"fields": [{"name": "capital", "type": "string"}]},
+    "checks": [{"field": "capital", "equals": "paris"}]
+  },
+  {
+    "id": "capital-japan",
+    "category": "facts",
+    "prompt": "What is the capital of Japan? Respond with just the capital city name.",
+    "schema_def": {"fields": [{"name": "capital", "type": "string"}]},
+    "checks": [{"field": "capital", "equals": "tokyo"}]
+  },
+  {
+    "id": "largest-planet",
+    "category": "facts",
+    "prompt": "What is the largest planet in our solar system? Respond with just the planet name.",
+    "schema_def": {"fields": [{"name": "planet", "type": "string"}]},
+    "checks": [{"field": "planet", "equals": "jupiter"}]
+  },
+  {
+    "id": "chemical-symbol-gold",
+    "category": "facts",
+    "prompt": "What is the chemical symbol for gold? Respond with just the symbol.",
+    "schema_def": {"fields": [{"name": "symbol", "type": "string"}]},
+    "checks": [{"field": "symbol", "equals": "au"}]
+  },
+  {
+    "id": "author-romeo-juliet",
+    "category": "facts",
+    "prompt": "Who wrote the play Romeo and Juliet? Respond with just the author's name.",
+    "schema_def": {"fields": [{"name": "author", "type": "string"}]},
+    "checks": [{"field": "author", "contains": "shakespeare"}]
+  },
+  {
+    "id": "freezing-point-water",
+    "category": "facts",
+    "prompt": "What is the freezing point of water in degrees Celsius? Respond with just the number.",
+    "schema_def": {"fields": [{"name": "degrees", "type": "number"}]},
+    "checks": [{"field": "degrees", "equals": "0"}]
+  },
+  {
+    "id": "continent-of-egypt",
+    "category": "facts",
+    "prompt": "Which continent is Egypt located in? Respond with just the continent name.",
+    "schema_def": {"fields": [{"name": "continent", "type": "string"}]},
+    "checks": [{"field": "continent", "contains": "africa"}]
+  },
+  {
+    "id": "speed-of-light-fact",
+    "category": "facts",
+    "prompt": "Is the speed of light in a vacuum approximately 300,000 km/s? Answer true or false.",
+    "schema_def": {"fields": [{"name": "approximately_300000_kms", "type": "boolean"}]},
+    "tier": "smart",
+    "checks": [{"field": "approximately_300000_kms", "equals": "true"}]
+  },
+  {
+    "id": "sum-two-numbers",
+    "category": "math",
+    "prompt": "What is 12 + 7? Respond with just the number.",
+    "schema_def": {"fields": [{"name": "sum", "type": "integer"}]},
+    "checks": [{"field": "sum", "equals": "19"}]
+  },
+  {
+    "id": "product-small",
+    "category": "math",
+    "prompt": "What is 6 times 7? Respond with just the number.",
+    "schema_def": {"fields": [{"name": "product", "type": "integer"}]},
+    "checks": [{"field": "product", "equals": "42"}]
+  },
+  {
+    "id": "even-or-odd",
+    "category": "math",
+    "prompt": "Is 17 an odd number? Answer true or false.",
+    "schema_def": {"fields": [{"name": "is_odd", "type": "boolean"}]},
+    "checks": [{"field": "is_odd", "equals": "true"}]
+  },
+  {
+    "id": "percentage-calc",
+    "category": "math",
+    "prompt": "What is 50% of 200? Respond with just the number.",
+    "schema_def": {"fields": [{"name": "result", "type": "number"}]},
+    "checks": [{"field": "result", "equals": "100"}]
+  },
+  {
+    "id": "primary-colors",
+    "category": "lists",
+    "prompt": "List the three primary colors of light: red, green, and blue.",
+    "schema_def": {"fields": [{"name": "colors", "type": "string_list"}]},
+    "checks": [{"field": "colors", "contains": "red"}]
+  },
+  {
+    "id": "days-in-week",
+    "category": "lists",
+    "prompt": "List the names of all 7 days of the week, starting with Monday.",
+    "schema_def": {"fields": [{"name": "days", "type": "string_list"}]},
+    "checks": [{"field": "days", "contains": "monday"}]
+  },
+  {
+    "id": "odd-numbers-1-10",
+    "category": "lists",
+    "prompt": "List the odd numbers between 1 and 10 inclusive.",
+    "schema_def": {"fields": [{"name": "numbers", "type": "integer_list"}]},
+    "checks": []
+  },
+  {
+    "id": "fruit-examples",
+    "category": "lists",
+    "prompt": "Name three example fruits.",
+    "schema_def": {"fields": [{"name": "fruits", "type": "string_list"}]},
+    "checks": []
+  },
+  {
+    "id": "is-paris-capital-of-france",
+    "category": "boolean",
+    "prompt": "True or false: Paris is the capital of France.",
+    "schema_def": {"fields": [{"name": "answer", "type": "boolean"}]},
+    "checks": [{"field": "answer", "equals": "true"}]
+  },
+  {
+    "id": "is-sun-a-planet",
+    "category": "boolean",
+    "prompt": "True or false: The Sun is a planet.",
+    "schema_def": {"fields": [{"name": "answer", "type": "boolean"}]},
+    "checks": [{"field": "answer", "equals": "false"}]
+  },
+  {
+    "id": "sentiment-positive",
+    "category": "classification",
+    "prompt": "Classify the sentiment of this sentence as positive, negative, or neutral: \"I love sunny days at the beach!\"",
+    "schema_def": {"fields": [{"name": "sentiment", "type": "string"}]},
+    "checks": [{"field": "sentiment", "one_of": ["positive"]}]
+  },
+  {
+    "id": "sentiment-negative",
+    "category": "classification",
+    "prompt": "Classify the sentiment of this sentence as positive, negative, or neutral: \"This was the worst meal I've ever had.\"",
+    "schema_def": {"fields": [{"name": "sentiment", "type": "string"}]},
+    "checks": [{"field": "sentiment", "one_of": ["negative"]}]
+  },
+  {
+    "id": "animal-classification",
+    "category": "classification",
+    "prompt": "Is a whale a fish or a mammal, biologically speaking? Respond with just the one word.",
+    "schema_def": {"fields": [{"name": "classification", "type": "string"}]},
+    "checks": [{"field": "classification", "equals": "mammal"}]
+  },
+  {
+    "id": "fruit-or-vegetable",
+    "category": "classification",
+    "prompt": "Is a tomato classified as a fruit or a vegetable botanically? Respond with just the one word.",
+    "schema_def": {"fields": [{"name": "classification", "type": "string"}]},
+    "tier": "smart",
+    "checks": [{"field": "classification", "equals": "fruit"}]
+  },
+  {
+    "id": "capital-and-vibe",
+    "category": "multi_field",
+    "prompt": "What is the capital of France, and describe its vibe in one word?",
+    "schema_def": {
+      "fields": [
+        {"name": "capital", "type": "string"},
+        {"name": "vibe", "type": "string"}
+      ]
+    },
+    "checks": [{"field": "capital", "equals": "paris"}]
+  },
+  {
+    "id": "country-info",
+    "category": "multi_field",
+    "prompt": "Give the capital city and official language of Germany.",
+    "schema_def": {
+      "fields": [
+        {"name": "capital", "type": "string"},
+        {"name": "language", "type": "string"}
+      ]
+    },
+    "checks": [
+      {"field": "capital", "equals": "berlin"},
+      {"field": "language", "contains": "german"}
+    ]
+  },
+  {
+    "id": "basic-profile",
+    "category": "multi_field",
+    "prompt": "Create a short profile for a fictional person named Alex who is 30 years old and enjoys hiking.",
+    "schema_def": {
+      "fields": [
+        {"name": "name", "type": "string"},
+        {"name": "age", "type": "integer"},
+        {"name": "hobby", "type": "string", "required": false}
+      ]
+    },
+    "checks": [
+      {"field": "name", "contains": "alex"},
+      {"field": "age", "equals": "30"}
+    ]
+  }
+]

@@ -1,0 +1,102 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-bg: #0b0b10;
+  --color-surface: #15151d;
+  --color-surface-raised: #1c1c27;
+  --color-border: #2a2a38;
+  --color-text: #e4e4ea;
+  --color-text-dim: #9494a3;
+  --color-accent: #7c5cff;
+  --color-accent-hover: #9179ff;
+  --color-success: #35d08f;
+  --color-warning: #ffb454;
+  --color-danger: #ff5c6c;
+  --color-gold: #e4b94c;
+  --color-gold-hover: #f0cc6b;
+  --color-purple: #a855f7;
+
+  --font-sans: 'Inter', system-ui, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', Consolas, monospace;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  min-height: 100vh;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+code,
+pre {
+  font-family: var(--font-mono);
+}
+
+/* Page-scoped theme for the Evaluation tab only — independent of the app's
+   single global dark theme used everywhere else. */
+[data-eval-theme='light'] {
+  --eval-primary: #4f6ee6;
+  --eval-secondary: #6cc4b8;
+  --eval-tertiary: #f0c050;
+  --eval-success: #1f9d6a;
+  --eval-warning: #b9770e;
+  --eval-danger: #d6425a;
+  --eval-bg: #ffffff;
+  --eval-surface: #ffffff;
+  --eval-surface-raised: #f5f6fa;
+  --eval-border: #e2e5ec;
+  --eval-text: #1a1d29;
+  --eval-text-dim: #6b7280;
+}
+
+[data-eval-theme='dark'] {
+  --eval-primary: var(--color-accent);
+  --eval-secondary: var(--color-purple);
+  --eval-tertiary: var(--color-gold);
+  --eval-success: var(--color-success);
+  --eval-warning: var(--color-warning);
+  --eval-danger: var(--color-danger);
+  --eval-bg: var(--color-bg);
+  --eval-surface: var(--color-surface);
+  --eval-surface-raised: var(--color-surface-raised);
+  --eval-border: var(--color-border);
+  --eval-text: var(--color-text);
+  --eval-text-dim: var(--color-text-dim);
+}
+
+[data-eval-theme] {
+  background: var(--eval-bg);
+  color: var(--eval-text);
+  border-radius: 0.75rem;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.eval-card {
+  background: var(--eval-surface);
+  border: 1px solid var(--eval-border);
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+}
+
+.eval-card-raised {
+  background: var(--eval-surface-raised);
+}
+
+.eval-text-dim {
+  color: var(--eval-text-dim);
+}
+
+.eval-border {
+  border-color: var(--eval-border);
+}
