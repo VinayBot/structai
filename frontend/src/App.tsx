@@ -5,6 +5,7 @@ import { AppShell } from './components/layout/AppShell'
 import { LandingPage } from './pages/LandingPage'
 import { LoginPage } from './pages/LoginPage'
 import { RegisterPage } from './pages/RegisterPage'
+import { GithubCallbackPage } from './pages/GithubCallbackPage'
 import { ChatPage } from './pages/ChatPage'
 import { ProjectsPage } from './pages/ProjectsPage'
 import { ArchitecturePage } from './pages/ArchitecturePage'
@@ -19,6 +20,7 @@ function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/auth/github/callback" element={<GithubCallbackPage />} />
 
         <Route path="/app" element={<ProtectedRoute />}>
           <Route element={<AppShell />}>

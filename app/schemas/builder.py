@@ -67,7 +67,7 @@ class SchemaValidateResponse(BaseModel):
 
 def build_model(schema: SchemaDef, *, model_name: str = "DynamicAnswer") -> type[BaseModel]:
     try:
-        field_definitions: dict[str, tuple] = {}
+        field_definitions: dict[str, tuple[Any, Any]] = {}
         for field_def in schema.fields:
             python_type = _TYPE_TABLE[field_def.type]
             annotation = python_type if field_def.required else python_type | None
@@ -77,7 +77,10 @@ def build_model(schema: SchemaDef, *, model_name: str = "DynamicAnswer") -> type
                 Field(default, description=field_def.description),
             )
 
-        return create_model(
+        # mypy can't resolve create_model's overloads against a **-unpacked dict,
+        # even typed exactly as `dict[str, tuple[Any, Any]]` - a known pydantic/mypy
+        # stub limitation, not a real type error (verified correct at runtime above).
+        return create_model(  # type: ignore[call-overload]
             model_name,
             __config__=ConfigDict(extra="forbid"),
             **field_definitions,

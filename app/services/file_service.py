@@ -1,10 +1,10 @@
 import uuid
 from pathlib import Path
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.errors import NotFoundError, PayloadTooLargeError
+from app.core.errors import NotFoundError, PayloadTooLargeError, UnsupportedMediaTypeError
 from app.models.file import FileAttachment
 
 
@@ -18,7 +18,11 @@ async def save_file(
     content: bytes,
     upload_dir: str,
     max_size_bytes: int,
+    allowed_content_types: set[str],
 ) -> FileAttachment:
+    if content_type not in allowed_content_types:
+        raise UnsupportedMediaTypeError(f"content type '{content_type}' is not accepted")
+
     if len(content) > max_size_bytes:
         raise PayloadTooLargeError(f"file exceeds the {max_size_bytes}-byte upload limit")
 
@@ -45,13 +49,26 @@ async def save_file(
 
 
 async def list_files(
-    session: AsyncSession, *, user_id: str, chat_id: str | None = None
-) -> list[FileAttachment]:
-    stmt = select(FileAttachment).where(FileAttachment.user_id == user_id)
+    session: AsyncSession,
+    *,
+    user_id: str,
+    chat_id: str | None = None,
+    limit: int = 20,
+    offset: int = 0,
+) -> tuple[list[FileAttachment], int]:
+    filters = [FileAttachment.user_id == user_id]
     if chat_id is not None:
-        stmt = stmt.where(FileAttachment.chat_id == chat_id)
-    result = await session.scalars(stmt.order_by(FileAttachment.created_at.desc()))
-    return list(result.all())
+        filters.append(FileAttachment.chat_id == chat_id)
+
+    total = await session.scalar(select(func.count()).select_from(FileAttachment).where(*filters))
+    result = await session.scalars(
+        select(FileAttachment)
+        .where(*filters)
+        .order_by(FileAttachment.created_at.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+    return list(result.all()), total or 0
 
 
 async def get_file(session: AsyncSession, *, user_id: str, file_id: str) -> FileAttachment:

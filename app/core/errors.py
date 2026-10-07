@@ -39,6 +39,11 @@ class UnauthorizedError(AppError):
     status_code = status.HTTP_401_UNAUTHORIZED
 
 
+class ForbiddenError(AppError):
+    code = "forbidden"
+    status_code = status.HTTP_403_FORBIDDEN
+
+
 class ConflictError(AppError):
     code = "conflict"
     status_code = status.HTTP_409_CONFLICT
@@ -87,6 +92,21 @@ class RateLimitError(AppError):
 class PayloadTooLargeError(AppError):
     code = "payload_too_large"
     status_code = status.HTTP_413_CONTENT_TOO_LARGE
+
+
+class UnsupportedMediaTypeError(AppError):
+    code = "unsupported_media_type"
+    status_code = status.HTTP_415_UNSUPPORTED_MEDIA_TYPE
+
+
+class OAuthError(AppError):
+    code = "oauth_failed"
+    status_code = status.HTTP_502_BAD_GATEWAY
+
+
+class ServiceUnavailableError(AppError):
+    code = "service_unavailable"
+    status_code = status.HTTP_503_SERVICE_UNAVAILABLE
 
 
 def _error_body(

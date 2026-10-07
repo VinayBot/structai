@@ -25,7 +25,7 @@ def _record(ts: float, method: str, path: str, status_code: int, duration_ms: fl
 def test_totals_and_by_endpoint_from_ring_buffer():
     _record(1000.0, "GET", "/health", 200, 10.0)
     _record(1000.0, "GET", "/health", 200, 20.0)
-    _record(1000.0, "POST", "/structured/answer", 500, 100.0)
+    _record(1000.0, "POST", "/api/v1/structured/answer", 500, 100.0)
 
     summary = build_summary(now=1000.0)
 
@@ -39,7 +39,7 @@ def test_totals_and_by_endpoint_from_ring_buffer():
     assert health.count == 2
     assert health.error_count == 0
 
-    structured = by_endpoint[("POST", "/structured/answer")]
+    structured = by_endpoint[("POST", "/api/v1/structured/answer")]
     assert structured.count == 1
     assert structured.error_count == 1
 

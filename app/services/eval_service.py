@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Literal
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import Settings
@@ -165,9 +165,15 @@ async def persist_run(
     return run.id
 
 
-async def list_runs(session: AsyncSession, *, limit: int = 20) -> list[EvalRun]:
-    result = await session.scalars(select(EvalRun).order_by(EvalRun.created_at.desc()).limit(limit))
+async def list_runs(session: AsyncSession, *, limit: int = 20, offset: int = 0) -> list[EvalRun]:
+    result = await session.scalars(
+        select(EvalRun).order_by(EvalRun.created_at.desc()).limit(limit).offset(offset)
+    )
     return list(result.all())
+
+
+async def count_runs(session: AsyncSession) -> int:
+    return await session.scalar(select(func.count()).select_from(EvalRun)) or 0
 
 
 async def get_run_detail(session: AsyncSession, run_id: str) -> EvalRunDetail:

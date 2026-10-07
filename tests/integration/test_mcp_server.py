@@ -169,6 +169,7 @@ async def test_list_and_get_files(mcp_tokens):
             content=b"\x89PNG-fake-bytes",
             upload_dir=settings.upload_dir,
             max_size_bytes=settings.max_upload_size_bytes,
+            allowed_content_types=settings.allowed_upload_content_type_set,
         )
 
     files = await _call("list_files")
@@ -181,9 +182,7 @@ async def test_list_and_get_files(mcp_tokens):
 
 async def test_search_finds_chat_and_message(mcp_tokens):
     chat = await _call("create_chat", {"title": "Trip to Japan"})
-    await _call(
-        "send_message", {"chat_id": chat["id"], "content": "what is the capital of Peru"}
-    )
+    await _call("send_message", {"chat_id": chat["id"], "content": "what is the capital of Peru"})
 
     by_title = await _call("search", {"query": "japan"})
     assert len(by_title["chats"]) == 1
@@ -199,9 +198,7 @@ async def test_get_usage_counts_ask_structured_calls(mcp_tokens, monkeypatch):
         "get_gateway",
         lambda: ModelGateway({"fast": [ProviderCandidate(fake, "fake-model")]}),
     )
-    await _call(
-        "ask_structured", {"prompt": "hi", "fields": [{"name": "title", "type": "string"}]}
-    )
+    await _call("ask_structured", {"prompt": "hi", "fields": [{"name": "title", "type": "string"}]})
 
     usage = await _call("get_usage")
     assert usage["user_count_today"] == 1

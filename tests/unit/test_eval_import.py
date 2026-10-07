@@ -104,9 +104,7 @@ async def test_import_plain_report_infers_dominant_provider_when_mixed(app, tmp_
     d = tmp_path / "reports"
     d.mkdir()
     report = _report("ollama")
-    report["results"].append(
-        {**report["results"][0], "case_id": "c2", "provider": "ollama"}
-    )
+    report["results"].append({**report["results"][0], "case_id": "c2", "provider": "ollama"})
     report["results"].append({**report["results"][0], "case_id": "c3", "provider": None})
     report["total"] = 3
     (d / "mixed.json").write_text(json.dumps(report))

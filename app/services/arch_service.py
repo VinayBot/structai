@@ -5,7 +5,7 @@ providers so a demo is fast, deterministic, and independent of whether
 Ollama/Groq are actually reachable.
 
 No route or test should hand-roll this data - add a node/edge/scenario here and
-GET /arch/graph, GET /arch/status, and POST /arch/test-run all pick it up.
+GET /api/v1/arch/graph, GET /api/v1/arch/status, and POST /api/v1/arch/test-run all pick it up.
 
 The graph linearizes what is really a dependency DAG (FastAPI resolves several
 guards in parallel, not strictly in this order) into a single left-to-right
@@ -64,18 +64,30 @@ from app.services.auth_service import register_user
 _GROUPS = [
     # --- Row 0: top-left corner, unchanged content --------------------------
     ArchGroup(
-        id="containerization_ci", label="Containerization & CI", tag="CI/CD",
-        color="neutral", order=0, row=0,
+        id="containerization_ci",
+        label="Containerization & CI",
+        tag="CI/CD",
+        color="neutral",
+        order=0,
+        row=0,
     ),
     ArchGroup(
-        id="backend_runtime_group", label="Backend Runtime", tag="RUNTIME",
-        color="neutral", order=1, row=0,
+        id="backend_runtime_group",
+        label="Backend Runtime",
+        tag="RUNTIME",
+        color="neutral",
+        order=1,
+        row=0,
     ),
     # --- Row 1: the main request pipeline, left to right --------------------
     ArchGroup(id="client_apps", label="Client Apps", tag="CLIENT", color="neutral", order=0, row=1),
     ArchGroup(
-        id="security_guardrails", label="Security & Guardrails", tag="SECURITY",
-        color="purple", order=1, row=1,
+        id="security_guardrails",
+        label="Security & Guardrails",
+        tag="SECURITY",
+        color="purple",
+        order=1,
+        row=1,
     ),
     ArchGroup(id="structai_core", label="StructAI Core", tag="CORE", color="gold", order=2, row=1),
     ArchGroup(id="gateway_group", label="Gateway", tag="GATEWAY", color="gold", order=3, row=1),
@@ -83,16 +95,30 @@ _GROUPS = [
     # --- Row 2: data/storage/observability, mostly extras -------------------
     ArchGroup(id="databases", label="Databases", tag="DATA", color="neutral", order=0, row=2),
     ArchGroup(
-        id="file_storage_group", label="File Storage", tag="STORAGE",
-        color="neutral", order=1, row=2, is_extra=True,
-    ),
-    ArchGroup(
-        id="multi_cloud_group", label="Multi-Cloud", tag="CLOUD", color="neutral", order=2, row=2,
+        id="file_storage_group",
+        label="File Storage",
+        tag="STORAGE",
+        color="neutral",
+        order=1,
+        row=2,
         is_extra=True,
     ),
     ArchGroup(
-        id="observability_evaluation", label="Observability & Evaluation", tag="INSIGHT",
-        color="gold", order=3, row=2,
+        id="multi_cloud_group",
+        label="Multi-Cloud",
+        tag="CLOUD",
+        color="neutral",
+        order=2,
+        row=2,
+        is_extra=True,
+    ),
+    ArchGroup(
+        id="observability_evaluation",
+        label="Observability & Evaluation",
+        tag="INSIGHT",
+        color="gold",
+        order=3,
+        row=2,
     ),
 ]
 
@@ -187,7 +213,7 @@ _NODES = [
         kind="data",
         group="file_storage_group",
         summary="Saves uploaded files to disk under a per-user directory and serves them back "
-        "by id - the real backing store behind every /files route.",
+        "by id - the real backing store behind every /api/v1/files route.",
         contract="save_file(user_id, upload) -> stored path; load/delete by file_id",
         code_path="app/services/file_service.py::save_file",
         icon="hardDrive",
@@ -206,7 +232,7 @@ _NODES = [
         code_path="app/gateway/providers/ollama.py",
         icon="ollama",
         visual_kind="tile",
-        telemetry="checked live by GET /arch/status via GET /api/tags",
+        telemetry="checked live by GET /api/v1/arch/status via GET /api/tags",
         status_key="ollama",
         tag="OLLAMA (local)",
     ),
@@ -220,7 +246,7 @@ _NODES = [
         code_path="app/gateway/providers/groq.py",
         icon="groq",
         visual_kind="tile",
-        telemetry="checked live by GET /arch/status via GET /openai/v1/models",
+        telemetry="checked live by GET /api/v1/arch/status via GET /openai/v1/models",
         status_key="groq",
         tag="GROQ (free tier)",
     ),
@@ -353,7 +379,7 @@ _NODES = [
         "corrected-address suggestion instead of a bare rejection, and an MX/A reachability "
         "lookup that hard-blocks a confirmed-nonexistent domain but fails open (warns, doesn't "
         "block) on a timeout or resolver error. The same check backs a dedicated POST "
-        "/auth/check-email endpoint so the frontend can validate-on-blur before submit.",
+        "/api/v1/auth/check-email endpoint so the frontend can validate-on-blur before submit.",
         contract="check_email(email, check_mx, mx_timeout, extra_disposable_domains) "
         "-> EmailCheckResult",
         code_path="app/guardrails/email.py::check_email",
@@ -403,15 +429,14 @@ _NODES = [
         group="security_guardrails",
         summary="Pattern-screens the prompt for jailbreak/injection attempts before it "
         "reaches PII redaction or any model - checked first, so a blocked prompt is never "
-        "even redacted or logged. Shared by /structured/answer and /structured/answer/stream "
-        "via the same guard_prompt() helper.",
+        "even redacted or logged. Shared by /api/v1/structured/answer and "
+        "/api/v1/structured/answer/stream via the same guard_prompt() helper.",
         contract="detect_prompt_injection(text) -> InjectionMatch | None",
         code_path="app/guardrails/injection.py, app/guardrails/prompt_guard.py",
         icon="shieldAlert",
         visual_kind="tile",
         guardrails=["prompt-injection pattern screen"],
-        telemetry="guardrail_blocks_total{reason=injection}, "
-        "injection_blocks_total{category}",
+        telemetry="guardrail_blocks_total{reason=injection}, injection_blocks_total{category}",
     ),
     ArchNode(
         id="pii_redaction",
@@ -422,7 +447,7 @@ _NODES = [
         "numbers, PAN, Indian/international phone numbers, and labeled IFSC/bank "
         "account/passport numbers from the prompt before it is sent to any model, logged, "
         "or persisted. PII_MODE=block refuses the request instead of redacting it. Applied "
-        "to both /structured/answer and /structured/answer/stream via the shared "
+        "to both /api/v1/structured/answer and /api/v1/structured/answer/stream via the shared "
         "guard_prompt() helper.",
         contract="scan_pii(text) -> PiiScanResult",
         code_path="app/guardrails/pii.py",
@@ -466,7 +491,9 @@ _NODES = [
         group="client_apps",
         summary="The chat page itself (frontend/src/pages/ChatPage.tsx) - the client app's "
         "primary surface for the structured-answer loop below.",
-        contract="renders ChatPage against the same /chats, /structured/answer endpoints",
+        contract=(
+            "renders ChatPage against the same /api/v1/chats, /api/v1/structured/answer endpoints"
+        ),
         code_path="frontend/src/pages/ChatPage.tsx",
         icon="messageSquare",
         visual_kind="tile",
@@ -483,7 +510,7 @@ _NODES = [
         code_path="app/core/tracing.py",
         icon="activity",
         visual_kind="tile",
-        telemetry="GET /traces",
+        telemetry="GET /api/v1/traces",
     ),
     ArchNode(
         id="metrics",
@@ -547,7 +574,7 @@ _EDGES = [
         id="e_client_email_guardrail",
         source="client",
         target="email_guardrail",
-        label="POST /auth/register",
+        label="POST /api/v1/auth/register",
         kind="sync",
         contract="RegisterRequest(email, password) -> blocklist check before account creation",
     ),
@@ -1398,7 +1425,12 @@ async def run_scenario(scenario_id: ScenarioId) -> TestRunResponse:
         else:
             steps.append(
                 _step(
-                    "injection_screen", None, "injection screen", "ok", "no match", t,
+                    "injection_screen",
+                    None,
+                    "injection screen",
+                    "ok",
+                    "no match",
+                    t,
                     request=request_payload,
                 )
             )

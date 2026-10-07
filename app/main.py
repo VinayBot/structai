@@ -10,6 +10,7 @@ from app.core.errors import register_exception_handlers
 from app.core.logging import configure_logging
 from app.core.middleware import metrics_middleware, request_id_middleware
 from app.db import get_session_maker
+from app.routes.admin import router as admin_router
 from app.routes.arch import router as arch_router
 from app.routes.auth import router as auth_router
 from app.routes.chats import router as chats_router
@@ -57,19 +58,25 @@ def create_app() -> FastAPI:
 
     register_exception_handlers(app)
 
+    # /health and /metrics stay unversioned: infra probes and Prometheus scrape
+    # targets are conventionally outside API versioning, consumed by tooling
+    # that doesn't track the API's own version lifecycle.
     app.include_router(health_router)
-    app.include_router(auth_router)
-    app.include_router(schemas_router)
-    app.include_router(structured_router)
-    app.include_router(projects_router)
-    app.include_router(chats_router)
-    app.include_router(files_router)
-    app.include_router(usage_router)
-    app.include_router(search_router)
-    app.include_router(traces_router)
     app.include_router(metrics_router)
-    app.include_router(eval_router)
-    app.include_router(arch_router)
+
+    api_v1 = "/api/v1"
+    app.include_router(auth_router, prefix=api_v1)
+    app.include_router(schemas_router, prefix=api_v1)
+    app.include_router(structured_router, prefix=api_v1)
+    app.include_router(projects_router, prefix=api_v1)
+    app.include_router(chats_router, prefix=api_v1)
+    app.include_router(files_router, prefix=api_v1)
+    app.include_router(usage_router, prefix=api_v1)
+    app.include_router(search_router, prefix=api_v1)
+    app.include_router(traces_router, prefix=api_v1)
+    app.include_router(eval_router, prefix=api_v1)
+    app.include_router(arch_router, prefix=api_v1)
+    app.include_router(admin_router, prefix=api_v1)
 
     return app
 

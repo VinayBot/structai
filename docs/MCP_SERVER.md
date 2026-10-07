@@ -95,7 +95,7 @@ quota usage are scoped to that account, exactly as they would be over the HTTP A
 
 | Tool | Purpose |
 |---|---|
-| `ask_structured(prompt, fields, tier="fast")` | Ask a question, get back JSON guaranteed to match `fields`. Same guardrails (injection screen, PII redaction, rate limit, daily quota) and retry-with-corrective-feedback loop as `POST /structured/answer`. |
+| `ask_structured(prompt, fields, tier="fast")` | Ask a question, get back JSON guaranteed to match `fields`. Same guardrails (injection screen, PII redaction, rate limit, daily quota) and retry-with-corrective-feedback loop as `POST /api/v1/structured/answer`. |
 | `validate_schema(fields)` | Check a field schema is well-formed; returns its JSON Schema. |
 | `list_projects()` | List the account's projects, newest first. |
 | `create_project(name)` | Create a project. |
@@ -108,7 +108,7 @@ quota usage are scoped to that account, exactly as they would be over the HTTP A
 | `search(query)` | Search the account's own chat titles and message content. |
 | `get_usage()` | Today's request-quota usage. |
 
-`fields` uses StructAI's schema format directly — the same shape `POST /structured/answer`
+`fields` uses StructAI's schema format directly — the same shape `POST /api/v1/structured/answer`
 takes — e.g.:
 
 ```json
@@ -139,7 +139,7 @@ body would carry — the underlying `AppError` subclass (`GuardrailError`, `NotF
 - Tools return plain JSON-serializable dicts rather than using the MCP SDK's binary
   `Image`/`Audio` content helpers — simpler and more testable, at the cost of a client not
   getting file content rendered inline; fetch it over the HTTP API
-  (`GET /files/{id}/content`) to view it.
+  (`GET /api/v1/files/{id}/content`) to view it.
 - If both the configured access token and refresh token are invalid/expired/revoked at the
   same time, every tool call fails until `scripts/mcp_issue_token.py` is re-run and `.env`
   (or your MCP client's config) is updated with a fresh pair.

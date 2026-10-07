@@ -29,8 +29,12 @@ _BODY = {
 async def _register_and_login(client: httpx.AsyncClient, base_url: str) -> str:
     email = f"loadtest-{uuid.uuid4().hex[:10]}@example.com"
     password = "password123"
-    await client.post(f"{base_url}/auth/register", json={"email": email, "password": password})
-    resp = await client.post(f"{base_url}/auth/login", json={"email": email, "password": password})
+    await client.post(
+        f"{base_url}/api/v1/auth/register", json={"email": email, "password": password}
+    )
+    resp = await client.post(
+        f"{base_url}/api/v1/auth/login", json={"email": email, "password": password}
+    )
     resp.raise_for_status()
     return resp.json()["access_token"]
 
@@ -42,7 +46,7 @@ async def _fire_one(
     async with semaphore:
         try:
             resp = await client.post(
-                f"{base_url}/structured/answer",
+                f"{base_url}/api/v1/structured/answer",
                 json=_BODY,
                 headers={"Authorization": f"Bearer {token}"},
             )

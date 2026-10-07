@@ -62,7 +62,9 @@ const GRAPH: ArchGraphResponse = {
       telemetry: 'span: jwt_auth',
       status_key: null,
       tag: null,
-      endpoints: [{ method: 'POST', path: '/arch/live-run', summary: '', auth_required: true, tags: [] }],
+      endpoints: [
+        { method: 'POST', path: '/api/v1/arch/live-run', summary: '', auth_required: true, tags: [] },
+      ],
       trace_spans: [],
       is_extra: false,
     },

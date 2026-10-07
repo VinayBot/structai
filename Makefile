@@ -1,39 +1,47 @@
-.PHONY: setup dev test lint migrate check-env up down eval load-test mcp mcp-token frontend-install frontend-dev frontend-build frontend-test frontend-lint
+.PHONY: setup dev test lint format migrate check-env up down eval load-test mcp mcp-token promote-admin frontend-install frontend-dev frontend-build frontend-test frontend-lint
 
 setup:
-	python3 -m venv .venv
-	.venv/bin/pip install -e ".[dev]"
+	uv sync
+	uv run pre-commit install
 
 dev:
 	@trap 'kill 0' EXIT INT TERM; \
-	uvicorn app.main:app --reload & \
+	uv run uvicorn app.main:app --reload & \
 	(cd frontend && npm run dev) & \
 	wait
 
 test:
-	pytest
+	uv run pytest
 
 lint:
-	ruff check .
-	mypy app
+	uv run ruff check .
+	uv run ruff format --check .
+	uv run mypy app
+
+format:
+	uv run ruff format .
+	uv run ruff check --fix .
 
 eval:
-	python3 scripts/run_eval.py
+	uv run python3 scripts/run_eval.py
 
 load-test:
-	python3 scripts/load_test.py
+	uv run python3 scripts/load_test.py
 
 mcp:
-	python3 -m app.mcp.server
+	uv run python3 -m app.mcp.server
 
 mcp-token:
-	python3 scripts/mcp_issue_token.py
+	uv run python3 scripts/mcp_issue_token.py
+
+promote-admin:
+	uv run python3 scripts/promote_admin.py
 
 migrate:
-	alembic upgrade head
+	uv run alembic upgrade head
 
 check-env:
-	python3 scripts/check_env.py
+	uv run python3 scripts/check_env.py
 
 up:
 	docker-compose up --build -d

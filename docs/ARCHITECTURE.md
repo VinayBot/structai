@@ -57,7 +57,7 @@ flowchart LR
   end
   client -->|HTTPS request| request_id
   request_id -->|request_id stamped| jwt_auth
-  client -->|POST /auth/register| email_guardrail
+  client -->|POST /api/v1/auth/register| email_guardrail
   jwt_auth -->|authenticated user| rate_limiter
   jwt_auth -->|authenticated, no rate limit on this route| request_validation
   rate_limiter -->|within budget| injection_screen
@@ -115,18 +115,18 @@ flowchart LR
 
 | Node | Label | Kind | Summary | Code |
 |---|---|---|---|---|
-| `email_guardrail` | Email Guardrail | guardrail | Four checks before an account is ever created: RFC syntax (email-validator), a disposable-domain blocklist (built-in list merged with an optional file-configurable extra list), typo detection against popular free-mail providers (Damerau-Levenshtein distance or a mangled TLD, with a safe-list for real look-alikes) that returns a corrected-address suggestion instead of a bare rejection, and an MX/A reachability lookup that hard-blocks a confirmed-nonexistent domain but fails open (warns, doesn't block) on a timeout or resolver error. The same check backs a dedicated POST /auth/check-email endpoint so the frontend can validate-on-blur before submit. | `app/guardrails/email.py::check_email` |
+| `email_guardrail` | Email Guardrail | guardrail | Four checks before an account is ever created: RFC syntax (email-validator), a disposable-domain blocklist (built-in list merged with an optional file-configurable extra list), typo detection against popular free-mail providers (Damerau-Levenshtein distance or a mangled TLD, with a safe-list for real look-alikes) that returns a corrected-address suggestion instead of a bare rejection, and an MX/A reachability lookup that hard-blocks a confirmed-nonexistent domain but fails open (warns, doesn't block) on a timeout or resolver error. The same check backs a dedicated POST /api/v1/auth/check-email endpoint so the frontend can validate-on-blur before submit. | `app/guardrails/email.py::check_email` |
 | `jwt_auth` | JWT Auth | edge | Verifies the bearer access token's signature, type, and expiry, then loads the active user. Every route except auth/health/metrics depends on this. | `app/core/deps.py::get_current_user, app/core/security.py` |
 | `rate_limiter` | Rate Limiter & Quota | edge | Sliding per-minute rate limit plus a daily quota (per user) on the two model-calling endpoints. | `app/core/deps.py::enforce_rate_limit, enforce_daily_quota, app/guardrails/rate_limit.py, app/services/quota_service.py` |
-| `injection_screen` | Injection Screen | guardrail | Pattern-screens the prompt for jailbreak/injection attempts before it reaches PII redaction or any model - checked first, so a blocked prompt is never even redacted or logged. Shared by /structured/answer and /structured/answer/stream via the same guard_prompt() helper. | `app/guardrails/injection.py, app/guardrails/prompt_guard.py` |
-| `pii_redaction` | PII Redaction | guardrail | Strips emails, SSNs, Luhn-checked card numbers, Verhoeff-checked Aadhaar numbers, PAN, Indian/international phone numbers, and labeled IFSC/bank account/passport numbers from the prompt before it is sent to any model, logged, or persisted. PII_MODE=block refuses the request instead of redacting it. Applied to both /structured/answer and /structured/answer/stream via the shared guard_prompt() helper. | `app/guardrails/pii.py` |
+| `injection_screen` | Injection Screen | guardrail | Pattern-screens the prompt for jailbreak/injection attempts before it reaches PII redaction or any model - checked first, so a blocked prompt is never even redacted or logged. Shared by /api/v1/structured/answer and /api/v1/structured/answer/stream via the same guard_prompt() helper. | `app/guardrails/injection.py, app/guardrails/prompt_guard.py` |
+| `pii_redaction` | PII Redaction | guardrail | Strips emails, SSNs, Luhn-checked card numbers, Verhoeff-checked Aadhaar numbers, PAN, Indian/international phone numbers, and labeled IFSC/bank account/passport numbers from the prompt before it is sent to any model, logged, or persisted. PII_MODE=block refuses the request instead of redacting it. Applied to both /api/v1/structured/answer and /api/v1/structured/answer/stream via the shared guard_prompt() helper. | `app/guardrails/pii.py` |
 | `request_validation` | Pydantic Request Validation | guardrail | Every request body is a Pydantic v2 model with extra='forbid' - unknown fields, wrong types, or failed field validators reject the request before any handler code runs. | `app/schemas/*.py (model_config = {'extra': 'forbid'})` |
 
 ### File Storage
 
 | Node | Label | Kind | Summary | Code |
 |---|---|---|---|---|
-| `file_storage` | File Storage | data | Saves uploaded files to disk under a per-user directory and serves them back by id - the real backing store behind every /files route. | `app/services/file_service.py::save_file` |
+| `file_storage` | File Storage | data | Saves uploaded files to disk under a per-user directory and serves them back by id - the real backing store behind every /api/v1/files route. | `app/services/file_service.py::save_file` |
 
 ### StructAI Core
 
@@ -173,7 +173,7 @@ flowchart LR
 |---|---|---|---|
 | `client` → `request_id` | sync | HTTPS request | any method/path |
 | `request_id` → `jwt_auth` | sync | request_id stamped | X-Request-Id echoed on response |
-| `client` → `email_guardrail` | sync | POST /auth/register | RegisterRequest(email, password) -> blocklist check before account creation |
+| `client` → `email_guardrail` | sync | POST /api/v1/auth/register | RegisterRequest(email, password) -> blocklist check before account creation |
 | `jwt_auth` → `rate_limiter` | sync | authenticated user | User |
 | `jwt_auth` → `request_validation` | sync | authenticated, no rate limit on this route | User |
 | `rate_limiter` → `injection_screen` | sync | within budget | str prompt, pre-screen |

@@ -47,7 +47,14 @@ _OBFUSCATED_SIGNATURES: dict[str, str] = {
 }
 
 _JAILBREAK_DEVICE_WORDS = (
-    "iphone", "android", "phone", "device", "ios", "firmware", "tablet", "jailbroken",
+    "iphone",
+    "android",
+    "phone",
+    "device",
+    "ios",
+    "firmware",
+    "tablet",
+    "jailbroken",
 )
 
 _BARE_PHRASE_ADJECTIVES = {"system", "hidden", "developer"}

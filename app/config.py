@@ -15,6 +15,14 @@ class Settings(BaseSettings):
     jwt_access_expire_min: int = 15
     jwt_refresh_expire_days: int = 7
 
+    # GitHub OAuth login - register an OAuth App at
+    # https://github.com/settings/developers with callback URL
+    # {github_oauth_redirect_uri}. Login is disabled (503) while client_id/secret
+    # are blank. See docs/API.md.
+    github_client_id: str = ""
+    github_client_secret: str = ""
+    github_oauth_redirect_uri: str = "http://localhost:5173/auth/github/callback"
+
     # Database
     database_url: str = "sqlite+aiosqlite:///./data/structai.db"
 
@@ -42,6 +50,10 @@ class Settings(BaseSettings):
     # Persistence / uploads
     upload_dir: str = "./data/uploads"
     max_upload_size_bytes: int = 10 * 1024 * 1024
+    allowed_upload_content_types: str = (
+        "text/plain,text/csv,text/markdown,application/json,application/pdf,"
+        "image/png,image/jpeg,image/gif,image/webp"
+    )
 
     # Observability
     otel_exporter_otlp_endpoint: str = ""
@@ -62,6 +74,10 @@ class Settings(BaseSettings):
     @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+
+    @property
+    def allowed_upload_content_type_set(self) -> set[str]:
+        return {t.strip() for t in self.allowed_upload_content_types.split(",") if t.strip()}
 
 
 @lru_cache

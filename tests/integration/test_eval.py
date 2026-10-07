@@ -15,13 +15,13 @@ def _fake_gateway_for(_provider: str, _settings) -> object:
 
 @pytest.mark.asyncio
 async def test_list_cases_requires_auth(client):
-    resp = await client.get("/eval/cases")
+    resp = await client.get("/api/v1/eval/cases")
     assert resp.status_code == 401
 
 
 @pytest.mark.asyncio
 async def test_list_cases_returns_golden_cases(client, auth_headers):
-    resp = await client.get("/eval/cases", headers=auth_headers)
+    resp = await client.get("/api/v1/eval/cases", headers=auth_headers)
     assert resp.status_code == 200
     body = resp.json()
     assert len(body) == len(eval_service.load_available_cases())
@@ -32,7 +32,7 @@ async def test_list_cases_returns_golden_cases(client, auth_headers):
 @pytest.mark.asyncio
 async def test_run_unknown_case_id_returns_404(client, auth_headers):
     resp = await client.post(
-        "/eval/run",
+        "/api/v1/eval/run",
         json={"case_ids": ["no-such-case"]},
         headers=auth_headers,
     )
@@ -46,7 +46,7 @@ async def test_run_eval_against_fake_gateway(client, auth_headers, monkeypatch):
     case_ids = [c.id for c in all_cases[:2]]
 
     resp = await client.post(
-        "/eval/run",
+        "/api/v1/eval/run",
         json={"case_ids": case_ids, "provider": "ollama", "concurrency": 2},
         headers=auth_headers,
     )
@@ -64,7 +64,7 @@ async def test_run_eval_stream_emits_case_done_then_done(client, auth_headers, m
 
     async with client.stream(
         "POST",
-        "/eval/run/stream",
+        "/api/v1/eval/run/stream",
         json={"case_ids": case_ids, "provider": "ollama", "concurrency": 2},
         headers=auth_headers,
     ) as resp:
@@ -82,15 +82,17 @@ async def test_run_eval_persists_a_run_row(client, auth_headers, monkeypatch):
     case_ids = [c.id for c in all_cases[:2]]
 
     resp = await client.post(
-        "/eval/run",
+        "/api/v1/eval/run",
         json={"case_ids": case_ids, "provider": "ollama", "concurrency": 2},
         headers=auth_headers,
     )
     assert resp.status_code == 200
 
-    runs_resp = await client.get("/eval/runs", headers=auth_headers)
+    runs_resp = await client.get("/api/v1/eval/runs", headers=auth_headers)
     assert runs_resp.status_code == 200
-    runs = runs_resp.json()
+    page = runs_resp.json()
+    assert page["total"] == 1
+    runs = page["items"]
     assert len(runs) == 1
     assert runs[0]["total"] == 2
     assert runs[0]["source"] == "api"
@@ -104,7 +106,7 @@ async def test_run_eval_stream_persists_a_run_row(client, auth_headers, monkeypa
 
     async with client.stream(
         "POST",
-        "/eval/run/stream",
+        "/api/v1/eval/run/stream",
         json={"case_ids": case_ids, "provider": "ollama", "concurrency": 2},
         headers=auth_headers,
     ) as resp:
@@ -112,19 +114,19 @@ async def test_run_eval_stream_persists_a_run_row(client, auth_headers, monkeypa
         async for _ in resp.aiter_lines():
             pass
 
-    runs_resp = await client.get("/eval/runs", headers=auth_headers)
-    assert len(runs_resp.json()) == 1
+    runs_resp = await client.get("/api/v1/eval/runs", headers=auth_headers)
+    assert len(runs_resp.json()["items"]) == 1
 
 
 @pytest.mark.asyncio
 async def test_list_runs_requires_auth(client):
-    resp = await client.get("/eval/runs")
+    resp = await client.get("/api/v1/eval/runs")
     assert resp.status_code == 401
 
 
 @pytest.mark.asyncio
 async def test_get_run_detail_404_for_unknown_id(client, auth_headers):
-    resp = await client.get("/eval/runs/no-such-run", headers=auth_headers)
+    resp = await client.get("/api/v1/eval/runs/no-such-run", headers=auth_headers)
     assert resp.status_code == 404
 
 
@@ -135,13 +137,13 @@ async def test_get_run_detail_returns_full_results(client, auth_headers, monkeyp
     case_ids = [c.id for c in all_cases[:1]]
 
     run_resp = await client.post(
-        "/eval/run",
+        "/api/v1/eval/run",
         json={"case_ids": case_ids, "provider": "ollama"},
         headers=auth_headers,
     )
-    run_id = (await client.get("/eval/runs", headers=auth_headers)).json()[0]["id"]
+    run_id = (await client.get("/api/v1/eval/runs", headers=auth_headers)).json()["items"][0]["id"]
 
-    detail_resp = await client.get(f"/eval/runs/{run_id}", headers=auth_headers)
+    detail_resp = await client.get(f"/api/v1/eval/runs/{run_id}", headers=auth_headers)
     assert detail_resp.status_code == 200
     body = detail_resp.json()
     assert body["id"] == run_id
@@ -156,12 +158,12 @@ async def test_get_dashboard_returns_latest_and_leaderboard(client, auth_headers
     case_ids = [c.id for c in all_cases[:1]]
 
     await client.post(
-        "/eval/run",
+        "/api/v1/eval/run",
         json={"case_ids": case_ids, "provider": "ollama"},
         headers=auth_headers,
     )
 
-    resp = await client.get("/eval/dashboard", headers=auth_headers)
+    resp = await client.get("/api/v1/eval/dashboard", headers=auth_headers)
     assert resp.status_code == 200
     body = resp.json()
     assert body["latest"] is not None

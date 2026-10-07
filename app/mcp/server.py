@@ -208,7 +208,7 @@ async def validate_schema(fields: list[FieldDef]) -> dict:
 async def list_projects() -> list[dict]:
     """List the configured StructAI account's projects, newest first."""
     async with _authed_session() as (session, user):
-        projects = await project_service.list_projects(session, user_id=user.id)
+        projects, _total = await project_service.list_projects(session, user_id=user.id)
     return [_serialize_project(p) for p in projects]
 
 
@@ -224,7 +224,9 @@ async def create_project(name: str) -> dict:
 async def list_chats(project_id: str | None = None) -> list[dict]:
     """List chats, optionally filtered to one project, most recently updated first."""
     async with _authed_session() as (session, user):
-        chats = await chat_service.list_chats(session, user_id=user.id, project_id=project_id)
+        chats, _total = await chat_service.list_chats(
+            session, user_id=user.id, project_id=project_id
+        )
     return [_serialize_chat(c) for c in chats]
 
 
@@ -242,7 +244,9 @@ async def create_chat(title: str, project_id: str | None = None) -> dict:
 async def list_messages(chat_id: str) -> list[dict]:
     """List a chat's messages in chronological order."""
     async with _authed_session() as (session, user):
-        messages = await chat_service.list_messages(session, user_id=user.id, chat_id=chat_id)
+        messages, _total = await chat_service.list_messages(
+            session, user_id=user.id, chat_id=chat_id
+        )
     return [_serialize_message(m) for m in messages]
 
 
@@ -262,7 +266,7 @@ async def send_message(
 async def list_files(chat_id: str | None = None) -> list[dict]:
     """List the configured account's stored files, optionally filtered to one chat."""
     async with _authed_session() as (session, user):
-        files = await file_service.list_files(session, user_id=user.id, chat_id=chat_id)
+        files, _total = await file_service.list_files(session, user_id=user.id, chat_id=chat_id)
     return [_serialize_file(f) for f in files]
 
 
@@ -314,7 +318,7 @@ async def usage_resource() -> str:
 async def projects_resource() -> str:
     """The configured account's projects, as a JSON array."""
     async with _authed_session() as (session, user):
-        projects = await project_service.list_projects(session, user_id=user.id)
+        projects, _total = await project_service.list_projects(session, user_id=user.id)
     return json.dumps([_serialize_project(p) for p in projects])
 
 

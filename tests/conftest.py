@@ -5,6 +5,7 @@ from collections.abc import AsyncIterator
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 _tmp_dir = tempfile.mkdtemp(prefix="structai-test-")
@@ -77,7 +78,25 @@ async def db_session(app) -> AsyncIterator[AsyncSession]:
 async def auth_headers(client: AsyncClient) -> dict[str, str]:
     email = "fixture-user@example.com"
     password = "fixturepass1"
-    await client.post("/auth/register", json={"email": email, "password": password})
-    resp = await client.post("/auth/login", json={"email": email, "password": password})
+    await client.post("/api/v1/auth/register", json={"email": email, "password": password})
+    resp = await client.post("/api/v1/auth/login", json={"email": email, "password": password})
+    token = resp.json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest_asyncio.fixture
+async def admin_auth_headers(client: AsyncClient, db_session: AsyncSession) -> dict[str, str]:
+    from app.models.user import User
+
+    email = "fixture-admin@example.com"
+    password = "fixturepass1"
+    await client.post("/api/v1/auth/register", json={"email": email, "password": password})
+
+    user = await db_session.scalar(select(User).where(User.email == email))
+    assert user is not None
+    user.role = "admin"
+    await db_session.commit()
+
+    resp = await client.post("/api/v1/auth/login", json={"email": email, "password": password})
     token = resp.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}

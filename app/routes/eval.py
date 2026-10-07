@@ -14,6 +14,7 @@ from app.schemas.eval import (
     EvalRunRequest,
     EvalRunSummary,
 )
+from app.schemas.pagination import Page
 from app.services import eval_service
 from eval.runner import run_eval
 from eval.schemas import EvalReport, GoldenCase
@@ -67,14 +68,21 @@ async def run_eval_stream_endpoint(
     return StreamingResponse(event_source(), media_type="text/event-stream")
 
 
-@router.get("/runs", response_model=list[EvalRunSummary])
+@router.get("/runs", response_model=Page[EvalRunSummary])
 async def list_runs(
-    limit: int = Query(default=20, ge=1, le=200),
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
     _user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
-) -> list[EvalRunSummary]:
-    runs = await eval_service.list_runs(session, limit=limit)
-    return [EvalRunSummary.model_validate(r, from_attributes=True) for r in runs]
+) -> Page[EvalRunSummary]:
+    runs = await eval_service.list_runs(session, limit=limit, offset=offset)
+    total = await eval_service.count_runs(session)
+    return Page(
+        items=[EvalRunSummary.model_validate(r, from_attributes=True) for r in runs],
+        total=total,
+        limit=limit,
+        offset=offset,
+    )
 
 
 @router.get("/runs/{run_id}", response_model=EvalRunDetail)

@@ -25,9 +25,9 @@ async def test_requests_beyond_the_per_minute_limit_are_rejected(app, client, au
     )
 
     body = {"prompt": "say hello", "schema_def": _SCHEMA_BODY}
-    first = await client.post("/structured/answer", json=body, headers=auth_headers)
-    second = await client.post("/structured/answer", json=body, headers=auth_headers)
-    third = await client.post("/structured/answer", json=body, headers=auth_headers)
+    first = await client.post("/api/v1/structured/answer", json=body, headers=auth_headers)
+    second = await client.post("/api/v1/structured/answer", json=body, headers=auth_headers)
+    third = await client.post("/api/v1/structured/answer", json=body, headers=auth_headers)
 
     assert first.status_code == 200
     assert second.status_code == 200

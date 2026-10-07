@@ -21,7 +21,7 @@ const FIXTURE = {
   totals: { requests: 42, errors: 2, error_rate: 0.047619, client_errors: 0, p50_ms: 12.5, p95_ms: 88.1 },
   by_endpoint: [
     { method: 'GET', path: '/health', count: 40, error_count: 0, p50_ms: 1.2, p95_ms: 2.1 },
-    { method: 'POST', path: '/structured/answer', count: 2, error_count: 2, p50_ms: 500, p95_ms: 900 },
+    { method: 'POST', path: '/api/v1/structured/answer', count: 2, error_count: 2, p50_ms: 500, p95_ms: 900 },
   ],
   by_status: { '2xx': 40, '4xx': 0, '5xx': 2, by_code: { '200': 40, '500': 2 } },
   guardrails: {

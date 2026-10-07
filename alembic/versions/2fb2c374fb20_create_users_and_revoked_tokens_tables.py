@@ -1,7 +1,7 @@
 """create users and revoked_tokens tables
 
 Revision ID: 2fb2c374fb20
-Revises: 
+Revises:
 Create Date: 2026-10-02 00:44:39.953505
 
 """

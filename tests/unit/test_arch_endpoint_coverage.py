@@ -53,10 +53,12 @@ def test_build_endpoints_resolves_summary_and_tags() -> None:
     endpoints = arch_endpoints.build_endpoints("jwt_auth", openapi_schema)
 
     assert {(e.method, e.path) for e in endpoints} == {
-        ("POST", "/auth/login"),
-        ("POST", "/auth/refresh"),
-        ("POST", "/auth/logout"),
-        ("GET", "/auth/me"),
+        ("POST", "/api/v1/auth/login"),
+        ("POST", "/api/v1/auth/refresh"),
+        ("POST", "/api/v1/auth/logout"),
+        ("GET", "/api/v1/auth/me"),
+        ("GET", "/api/v1/auth/github/login"),
+        ("POST", "/api/v1/auth/github/callback"),
     }
     for endpoint in endpoints:
         assert endpoint.tags == ["auth"]
