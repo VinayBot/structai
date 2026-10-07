@@ -1,6 +1,9 @@
+import os
+
 import app.guardrails.email as email_guard
 from app.config import get_settings
 from app.core.errors import OAuthError
+from app.guardrails.rate_limit import reset_rate_limiter_cache
 from app.services import github_oauth_client
 from app.services.github_oauth_client import GithubProfile
 
@@ -297,3 +300,41 @@ async def test_github_callback_upstream_failure_returns_502(client, monkeypatch)
     resp = await client.post("/api/v1/auth/github/callback", json={"code": "bad-code"})
     assert resp.status_code == 502
     assert resp.json()["error"]["code"] == "oauth_failed"
+
+
+async def test_login_is_rate_limited_per_ip(client):
+    os.environ["AUTH_RATE_LIMIT_PER_MIN"] = "2"
+    get_settings.cache_clear()
+    reset_rate_limiter_cache()
+
+    await _register(client)  # one hit against the shared per-IP auth budget
+
+    second = await client.post(
+        "/api/v1/auth/login", json={"email": "alice@example.com", "password": "wrong"}
+    )
+    assert second.status_code == 401  # bad credentials, but still under the limit
+
+    third = await client.post(
+        "/api/v1/auth/login", json={"email": "alice@example.com", "password": "wrong"}
+    )
+    assert third.status_code == 429
+    assert third.json()["error"]["code"] == "rate_limited"
+
+    del os.environ["AUTH_RATE_LIMIT_PER_MIN"]
+
+
+async def test_register_login_refresh_and_github_callback_share_one_auth_rate_limit(client):
+    """The limiter is keyed by IP, not by endpoint - hammering different
+    credential-taking auth routes from the same source shares one budget."""
+    os.environ["AUTH_RATE_LIMIT_PER_MIN"] = "1"
+    get_settings.cache_clear()
+    reset_rate_limiter_cache()
+
+    await _register(client)  # spends the one allowed hit
+
+    limited = await client.post(
+        "/api/v1/auth/login", json={"email": "alice@example.com", "password": "wrong"}
+    )
+    assert limited.status_code == 429
+
+    del os.environ["AUTH_RATE_LIMIT_PER_MIN"]

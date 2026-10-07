@@ -23,7 +23,7 @@ Every error response — from an `AppError` subclass, a Pydantic validation fail
 | `guardrail_blocked` | 400 | `GuardrailError` | Prompt matched the injection screen |
 | `rate_limited` | 429 | `RateLimitError` | Per-minute rate limit or daily quota (user) exceeded |
 | `payload_too_large` | 413 | `PayloadTooLargeError` | Upload/generated file exceeds `max_upload_size_bytes` |
-| `unsupported_media_type` | 415 | `UnsupportedMediaTypeError` | Upload `content_type` isn't on `allowed_upload_content_types` |
+| `unsupported_media_type` | 415 | `UnsupportedMediaTypeError` | Upload `content_type` isn't on `allowed_upload_content_types`, or its bytes don't match that claimed type |
 | `forbidden` | 403 | `ForbiddenError` | Authenticated, but `require_admin` rejected a non-admin caller |
 | `oauth_failed` | 502 | `OAuthError` | GitHub rejected the authorization code, or its API failed unexpectedly |
 | `service_unavailable` | 503 | `ServiceUnavailableError` | GitHub login hit while `GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET` are unset |
@@ -52,6 +52,8 @@ Every error response — from an `AppError` subclass, a Pydantic validation fail
 | `POST /api/v1/auth/github/callback` | none | `{code}` | `200` `{access_token, refresh_token, token_type}` | Exchanges `code` with GitHub, fetches the profile (falling back to `/user/emails` if the primary address is private), and finds-or-creates a `User`. An existing password account with the same verified email gets GitHub linked to it rather than erroring. `502 oauth_failed` if GitHub rejects the code or its API fails; `503 service_unavailable` if not configured. |
 
 `POST /api/v1/auth/register` does **not** return tokens — call `/api/v1/auth/login` separately to obtain them.
+
+`register`, `login`, `refresh`, and `github/callback` share one `429 rate_limited` budget (`AUTH_RATE_LIMIT_PER_MIN`, default 10/min) keyed by caller IP — brute-forcing a password or hammering the token endpoints from one source gets throttled regardless of which of the four it's spread across. `check-email` and `github/login` take no credential, so neither is covered.
 
 **Setting up GitHub login:** register an OAuth App at [github.com/settings/developers](https://github.com/settings/developers) with callback URL `http://localhost:5173/auth/github/callback` (or your deployed frontend origin + `/auth/github/callback`), then set `GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET`/`GITHUB_OAUTH_REDIRECT_URI` in `.env`. The login button degrades to a clear `503` error, not a crash, while unconfigured.
 
@@ -162,7 +164,7 @@ data: {"stage": "done", "attempt": 1, "data": {"capital": "Paris", "population":
 
 | Endpoint | Request | Response |
 |---|---|---|
-| `POST /api/v1/files` | multipart `file` + query `chat_id?` | `201` `{id, filename, content_type, size_bytes, chat_id, created_at}`; `413 payload_too_large` over `max_upload_size_bytes` (default 10 MiB); `415 unsupported_media_type` if `content_type` isn't on the allowlist |
+| `POST /api/v1/files` | multipart `file` + query `chat_id?` | `201` `{id, filename, content_type, size_bytes, chat_id, created_at}`; `413 payload_too_large` over `max_upload_size_bytes` (default 10 MiB); `415 unsupported_media_type` if `content_type` isn't on the allowlist, or if the bytes don't actually look like it (magic-byte signature check for images/PDF, UTF-8/JSON-parse check for the text types) — the client-supplied header alone is never trusted |
 | `GET /api/v1/files?chat_id=&limit=&offset=` | — | `200` `Page[File]`, newest first |
 | `GET /api/v1/files/{id}` | — | `200` metadata / `404` |
 | `DELETE /api/v1/files/{id}` | — | `204` / `404` |
@@ -247,6 +249,7 @@ Every endpoint here requires `require_admin` (`app/core/deps.py`) in addition to
 | JWT auth | `get_current_user` | everything except `/api/v1/auth/register`, `/api/v1/auth/check-email`, `/api/v1/auth/login`, `/api/v1/auth/refresh`, `/api/v1/auth/logout`, `/api/v1/auth/github/login`, `/api/v1/auth/github/callback`, `/health`, `/ready`, `/metrics` |
 | Admin role | `require_admin` | `/api/v1/admin/*` |
 | Per-minute rate limit | `enforce_rate_limit` | `POST /api/v1/structured/answer(+stream)` |
+| Per-IP auth rate limit | `enforce_auth_rate_limit` | `POST /api/v1/auth/register`, `/login`, `/refresh`, `/github/callback` — one shared budget across all four, since it's keyed by IP, not endpoint |
 | Daily quota | `enforce_daily_quota` | same endpoints |
 | Prompt-injection screen | `detect_prompt_injection` (via shared `guard_prompt()`) | `POST /api/v1/structured/answer(+stream)` |
 | PII redaction | `redact_pii` (via shared `guard_prompt()`) | `POST /api/v1/structured/answer(+stream)` — see [GUARDRAILS.md](GUARDRAILS.md#2-pii-redaction) |
