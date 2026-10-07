@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import NotFoundError
@@ -22,13 +22,22 @@ async def create_chat(
 
 
 async def list_chats(
-    session: AsyncSession, *, user_id: str, project_id: str | None = None
-) -> list[Chat]:
-    stmt = select(Chat).where(Chat.user_id == user_id)
+    session: AsyncSession,
+    *,
+    user_id: str,
+    project_id: str | None = None,
+    limit: int = 20,
+    offset: int = 0,
+) -> tuple[list[Chat], int]:
+    filters = [Chat.user_id == user_id]
     if project_id is not None:
-        stmt = stmt.where(Chat.project_id == project_id)
-    result = await session.scalars(stmt.order_by(Chat.updated_at.desc()))
-    return list(result.all())
+        filters.append(Chat.project_id == project_id)
+
+    total = await session.scalar(select(func.count()).select_from(Chat).where(*filters))
+    result = await session.scalars(
+        select(Chat).where(*filters).order_by(Chat.updated_at.desc()).limit(limit).offset(offset)
+    )
+    return list(result.all()), total or 0
 
 
 async def get_chat(session: AsyncSession, *, user_id: str, chat_id: str) -> Chat:
@@ -44,12 +53,33 @@ async def delete_chat(session: AsyncSession, *, user_id: str, chat_id: str) -> N
     await session.commit()
 
 
-async def list_messages(session: AsyncSession, *, user_id: str, chat_id: str) -> list[Message]:
+async def list_messages(
+    session: AsyncSession,
+    *,
+    user_id: str,
+    chat_id: str,
+    limit: int | None = None,
+    offset: int = 0,
+) -> tuple[list[Message], int]:
+    """limit=None (the default) returns the full conversation - used when embedding
+    messages into a chat's detail view, where truncating to a page would silently
+    hide history. The standalone GET /chats/{id}/messages route opts into a real
+    limit for callers that actually want to page through a long conversation."""
     await get_chat(session, user_id=user_id, chat_id=chat_id)
-    result = await session.scalars(
-        select(Message).where(Message.chat_id == chat_id).order_by(Message.created_at.asc())
+
+    total = await session.scalar(
+        select(func.count()).select_from(Message).where(Message.chat_id == chat_id)
     )
-    return list(result.all())
+    stmt = (
+        select(Message)
+        .where(Message.chat_id == chat_id)
+        .order_by(Message.created_at.asc())
+        .offset(offset)
+    )
+    if limit is not None:
+        stmt = stmt.limit(limit)
+    result = await session.scalars(stmt)
+    return list(result.all()), total or 0
 
 
 async def add_message(

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, UploadFile
+from fastapi import APIRouter, Depends, Query, UploadFile
 from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -7,6 +7,7 @@ from app.core.deps import get_current_user
 from app.db import get_session
 from app.models.user import User
 from app.schemas.files import FileResponse
+from app.schemas.pagination import Page
 from app.services import file_service
 
 router = APIRouter(prefix="/files", tags=["files"])
@@ -34,14 +35,23 @@ async def upload_file(
     return FileResponse.model_validate(attachment, from_attributes=True)
 
 
-@router.get("", response_model=list[FileResponse])
+@router.get("", response_model=Page[FileResponse])
 async def list_files(
     chat_id: str | None = None,
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
-) -> list[FileResponse]:
-    files = await file_service.list_files(session, user_id=user.id, chat_id=chat_id)
-    return [FileResponse.model_validate(f, from_attributes=True) for f in files]
+) -> Page[FileResponse]:
+    files, total = await file_service.list_files(
+        session, user_id=user.id, chat_id=chat_id, limit=limit, offset=offset
+    )
+    return Page(
+        items=[FileResponse.model_validate(f, from_attributes=True) for f in files],
+        total=total,
+        limit=limit,
+        offset=offset,
+    )
 
 
 @router.get("/{file_id}", response_model=FileResponse)

@@ -1,7 +1,7 @@
 import uuid
 from pathlib import Path
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import NotFoundError, PayloadTooLargeError
@@ -45,13 +45,26 @@ async def save_file(
 
 
 async def list_files(
-    session: AsyncSession, *, user_id: str, chat_id: str | None = None
-) -> list[FileAttachment]:
-    stmt = select(FileAttachment).where(FileAttachment.user_id == user_id)
+    session: AsyncSession,
+    *,
+    user_id: str,
+    chat_id: str | None = None,
+    limit: int = 20,
+    offset: int = 0,
+) -> tuple[list[FileAttachment], int]:
+    filters = [FileAttachment.user_id == user_id]
     if chat_id is not None:
-        stmt = stmt.where(FileAttachment.chat_id == chat_id)
-    result = await session.scalars(stmt.order_by(FileAttachment.created_at.desc()))
-    return list(result.all())
+        filters.append(FileAttachment.chat_id == chat_id)
+
+    total = await session.scalar(select(func.count()).select_from(FileAttachment).where(*filters))
+    result = await session.scalars(
+        select(FileAttachment)
+        .where(*filters)
+        .order_by(FileAttachment.created_at.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+    return list(result.all()), total or 0
 
 
 async def get_file(session: AsyncSession, *, user_id: str, file_id: str) -> FileAttachment:

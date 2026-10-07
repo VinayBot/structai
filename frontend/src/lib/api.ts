@@ -23,6 +23,7 @@ import type {
   Message,
   MetricsSummaryResponse,
   OpenApiDoc,
+  Page,
   Project,
   SchemaDef,
   SchemaValidateResponse,
@@ -191,14 +192,14 @@ export const structuredApi = {
 }
 
 export const projectsApi = {
-  list: () => request<Project[]>('/projects'),
+  list: () => request<Page<Project>>('/projects'),
   create: (name: string) => request<Project>('/projects', { method: 'POST', body: { name } }),
   remove: (id: string) => request<void>(`/projects/${id}`, { method: 'DELETE' }),
 }
 
 export const chatsApi = {
   list: (projectId?: string) =>
-    request<Chat[]>(`/chats${projectId ? `?project_id=${projectId}` : ''}`),
+    request<Page<Chat>>(`/chats${projectId ? `?project_id=${projectId}` : ''}`),
   create: (title: string, projectId?: string | null) =>
     request<Chat>('/chats', { method: 'POST', body: { title, project_id: projectId ?? null } }),
   get: (id: string) => request<ChatDetail>(`/chats/${id}`),
@@ -220,7 +221,7 @@ export const evalApi = {
   /** Non-streaming run — unused by EvaluationPage (which uses streamEvalRun below) but kept for parity with the route. */
   runSync: (body: EvalRunRequest) => request<EvalReport>('/eval/run', { method: 'POST', body }),
   runs: (limit?: number) =>
-    request<EvalRunSummary[]>(`/eval/runs${limit !== undefined ? `?limit=${limit}` : ''}`),
+    request<Page<EvalRunSummary>>(`/eval/runs${limit !== undefined ? `?limit=${limit}` : ''}`),
   runDetail: (id: string) => request<EvalRunDetail>(`/eval/runs/${id}`),
   dashboard: () => request<EvalDashboardResponse>('/eval/dashboard'),
 }
@@ -266,7 +267,7 @@ export const filesApi = {
     )
   },
   list: (chatId?: string) =>
-    request<FileAttachment[]>(`/files${chatId ? `?chat_id=${chatId}` : ''}`),
+    request<Page<FileAttachment>>(`/files${chatId ? `?chat_id=${chatId}` : ''}`),
   get: (id: string) => request<FileAttachment>(`/files/${id}`),
   remove: (id: string) => request<void>(`/files/${id}`, { method: 'DELETE' }),
   contentBlobUrl: async (id: string): Promise<string> => {

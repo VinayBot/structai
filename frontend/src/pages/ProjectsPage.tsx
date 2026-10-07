@@ -27,14 +27,14 @@ export function ProjectsPage() {
   async function refreshProjects() {
     setLoading(true)
     try {
-      setProjects(await projectsApi.list())
+      setProjects((await projectsApi.list()).items)
     } finally {
       setLoading(false)
     }
   }
 
   async function refreshChats(projectId: string) {
-    setChats(await chatsApi.list(projectId))
+    setChats((await chatsApi.list(projectId)).items)
   }
 
   async function handleCreateProject(e: FormEvent) {

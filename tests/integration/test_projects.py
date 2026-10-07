@@ -11,7 +11,8 @@ async def test_create_and_list_projects(client, auth_headers):
 
     listing = await client.get("/projects", headers=auth_headers)
     assert listing.status_code == 200
-    assert len(listing.json()) == 1
+    assert listing.json()["total"] == 1
+    assert len(listing.json()["items"]) == 1
 
 
 @pytest.mark.asyncio
@@ -54,3 +55,24 @@ async def test_project_not_visible_to_other_user(client, auth_headers):
 async def test_requires_auth(client):
     resp = await client.get("/projects")
     assert resp.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_list_projects_pagination(client, auth_headers):
+    for i in range(5):
+        await client.post("/projects", json={"name": f"P{i}"}, headers=auth_headers)
+
+    first_page = await client.get("/projects?limit=2&offset=0", headers=auth_headers)
+    body = first_page.json()
+    assert body["total"] == 5
+    assert body["limit"] == 2
+    assert body["offset"] == 0
+    assert len(body["items"]) == 2
+
+    second_page = await client.get("/projects?limit=2&offset=2", headers=auth_headers)
+    second_items = second_page.json()["items"]
+    assert len(second_items) == 2
+    assert {p["id"] for p in body["items"]}.isdisjoint({p["id"] for p in second_items})
+
+    last_page = await client.get("/projects?limit=2&offset=4", headers=auth_headers)
+    assert len(last_page.json()["items"]) == 1

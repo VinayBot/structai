@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import NotFoundError
@@ -12,11 +12,20 @@ async def create_project(session: AsyncSession, *, user_id: str, name: str) -> P
     return project
 
 
-async def list_projects(session: AsyncSession, *, user_id: str) -> list[Project]:
-    result = await session.scalars(
-        select(Project).where(Project.user_id == user_id).order_by(Project.created_at.desc())
+async def list_projects(
+    session: AsyncSession, *, user_id: str, limit: int = 20, offset: int = 0
+) -> tuple[list[Project], int]:
+    total = await session.scalar(
+        select(func.count()).select_from(Project).where(Project.user_id == user_id)
     )
-    return list(result.all())
+    result = await session.scalars(
+        select(Project)
+        .where(Project.user_id == user_id)
+        .order_by(Project.created_at.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+    return list(result.all()), total or 0
 
 
 async def get_project(session: AsyncSession, *, user_id: str, project_id: str) -> Project:

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_current_user
@@ -11,6 +11,7 @@ from app.schemas.chats import (
     MessageCreateRequest,
     MessageResponse,
 )
+from app.schemas.pagination import Page
 from app.services import chat_service
 
 router = APIRouter(prefix="/chats", tags=["chats"])
@@ -28,14 +29,23 @@ async def create_chat(
     return ChatResponse.model_validate(chat, from_attributes=True)
 
 
-@router.get("", response_model=list[ChatResponse])
+@router.get("", response_model=Page[ChatResponse])
 async def list_chats(
     project_id: str | None = None,
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
-) -> list[ChatResponse]:
-    chats = await chat_service.list_chats(session, user_id=user.id, project_id=project_id)
-    return [ChatResponse.model_validate(c, from_attributes=True) for c in chats]
+) -> Page[ChatResponse]:
+    chats, total = await chat_service.list_chats(
+        session, user_id=user.id, project_id=project_id, limit=limit, offset=offset
+    )
+    return Page(
+        items=[ChatResponse.model_validate(c, from_attributes=True) for c in chats],
+        total=total,
+        limit=limit,
+        offset=offset,
+    )
 
 
 @router.get("/{chat_id}", response_model=ChatDetailResponse)
@@ -45,7 +55,7 @@ async def get_chat(
     session: AsyncSession = Depends(get_session),
 ) -> ChatDetailResponse:
     chat = await chat_service.get_chat(session, user_id=user.id, chat_id=chat_id)
-    messages = await chat_service.list_messages(session, user_id=user.id, chat_id=chat_id)
+    messages, _total = await chat_service.list_messages(session, user_id=user.id, chat_id=chat_id)
     return ChatDetailResponse(
         id=chat.id,
         title=chat.title,
@@ -85,11 +95,20 @@ async def add_message(
     return MessageResponse.model_validate(message, from_attributes=True)
 
 
-@router.get("/{chat_id}/messages", response_model=list[MessageResponse])
+@router.get("/{chat_id}/messages", response_model=Page[MessageResponse])
 async def list_messages(
     chat_id: str,
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
-) -> list[MessageResponse]:
-    messages = await chat_service.list_messages(session, user_id=user.id, chat_id=chat_id)
-    return [MessageResponse.model_validate(m, from_attributes=True) for m in messages]
+) -> Page[MessageResponse]:
+    messages, total = await chat_service.list_messages(
+        session, user_id=user.id, chat_id=chat_id, limit=limit, offset=offset
+    )
+    return Page(
+        items=[MessageResponse.model_validate(m, from_attributes=True) for m in messages],
+        total=total,
+        limit=limit,
+        offset=offset,
+    )

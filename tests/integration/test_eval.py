@@ -90,7 +90,9 @@ async def test_run_eval_persists_a_run_row(client, auth_headers, monkeypatch):
 
     runs_resp = await client.get("/eval/runs", headers=auth_headers)
     assert runs_resp.status_code == 200
-    runs = runs_resp.json()
+    page = runs_resp.json()
+    assert page["total"] == 1
+    runs = page["items"]
     assert len(runs) == 1
     assert runs[0]["total"] == 2
     assert runs[0]["source"] == "api"
@@ -113,7 +115,7 @@ async def test_run_eval_stream_persists_a_run_row(client, auth_headers, monkeypa
             pass
 
     runs_resp = await client.get("/eval/runs", headers=auth_headers)
-    assert len(runs_resp.json()) == 1
+    assert len(runs_resp.json()["items"]) == 1
 
 
 @pytest.mark.asyncio
@@ -139,7 +141,7 @@ async def test_get_run_detail_returns_full_results(client, auth_headers, monkeyp
         json={"case_ids": case_ids, "provider": "ollama"},
         headers=auth_headers,
     )
-    run_id = (await client.get("/eval/runs", headers=auth_headers)).json()[0]["id"]
+    run_id = (await client.get("/eval/runs", headers=auth_headers)).json()["items"][0]["id"]
 
     detail_resp = await client.get(f"/eval/runs/{run_id}", headers=auth_headers)
     assert detail_resp.status_code == 200

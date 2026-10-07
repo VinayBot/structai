@@ -24,7 +24,8 @@ async def test_list_files(client, auth_headers):
 
     listing = await client.get("/files", headers=auth_headers)
     assert listing.status_code == 200
-    assert len(listing.json()) == 1
+    assert listing.json()["total"] == 1
+    assert len(listing.json()["items"]) == 1
 
 
 @pytest.mark.asyncio

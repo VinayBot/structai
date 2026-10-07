@@ -36,7 +36,8 @@ async def test_add_and_list_messages(client, auth_headers):
 
     listing = await client.get(f"/chats/{chat_id}/messages", headers=auth_headers)
     assert listing.status_code == 200
-    assert len(listing.json()) == 1
+    assert listing.json()["total"] == 1
+    assert len(listing.json()["items"]) == 1
 
     detail = await client.get(f"/chats/{chat_id}", headers=auth_headers)
     assert len(detail.json()["messages"]) == 1
@@ -56,8 +57,9 @@ async def test_list_chats_filtered_by_project(client, auth_headers):
 
     filtered = await client.get(f"/chats?project_id={project_id}", headers=auth_headers)
     assert filtered.status_code == 200
-    assert len(filtered.json()) == 1
-    assert filtered.json()[0]["title"] == "In project"
+    items = filtered.json()["items"]
+    assert len(items) == 1
+    assert items[0]["title"] == "In project"
 
 
 @pytest.mark.asyncio
