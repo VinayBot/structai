@@ -1,4 +1,4 @@
-.PHONY: setup dev test lint migrate check-env up down eval load-test mcp mcp-token frontend-install frontend-dev frontend-build frontend-test frontend-lint
+.PHONY: setup dev test lint migrate check-env up down eval load-test mcp mcp-token promote-admin frontend-install frontend-dev frontend-build frontend-test frontend-lint
 
 setup:
 	python3 -m venv .venv
@@ -28,6 +28,9 @@ mcp:
 
 mcp-token:
 	python3 scripts/mcp_issue_token.py
+
+promote-admin:
+	python3 scripts/promote_admin.py
 
 migrate:
 	alembic upgrade head

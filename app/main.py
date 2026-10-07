@@ -10,6 +10,7 @@ from app.core.errors import register_exception_handlers
 from app.core.logging import configure_logging
 from app.core.middleware import metrics_middleware, request_id_middleware
 from app.db import get_session_maker
+from app.routes.admin import router as admin_router
 from app.routes.arch import router as arch_router
 from app.routes.auth import router as auth_router
 from app.routes.chats import router as chats_router
@@ -70,6 +71,7 @@ def create_app() -> FastAPI:
     app.include_router(metrics_router)
     app.include_router(eval_router)
     app.include_router(arch_router)
+    app.include_router(admin_router)
 
     return app
 

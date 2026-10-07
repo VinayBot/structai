@@ -76,7 +76,7 @@ async def register_user(session: AsyncSession, email: str, password: str) -> Use
     user = User(email=email, hashed_password=hash_password(password))
     session.add(user)
     await session.commit()
-    return UserResponse(id=user.id, email=user.email)
+    return UserResponse(id=user.id, email=user.email, role=user.role)
 
 
 def _issue_tokens(user_id: str) -> TokenResponse:

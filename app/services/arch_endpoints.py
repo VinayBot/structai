@@ -36,6 +36,7 @@ _NODE_ROUTES: dict[str, list[tuple[str, str, bool]]] = {
     ],
     "rate_limiter": [
         ("GET", "/usage", True),
+        ("GET", "/admin/usage", True),
     ],
     "jwt_auth": [
         ("POST", "/auth/login", False),
@@ -63,6 +64,8 @@ _NODE_ROUTES: dict[str, list[tuple[str, str, bool]]] = {
         ("POST", "/chats/{chat_id}/messages", True),
         ("GET", "/chats/{chat_id}/messages", True),
         ("GET", "/search", True),
+        ("GET", "/admin/users", True),
+        ("PATCH", "/admin/users/{user_id}/role", True),
     ],
     "file_storage": [
         ("POST", "/files", True),

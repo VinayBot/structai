@@ -2,7 +2,7 @@ from fastapi import Depends, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import Settings, get_settings
-from app.core.errors import RateLimitError, UnauthorizedError
+from app.core.errors import ForbiddenError, RateLimitError, UnauthorizedError
 from app.core.metrics import RATE_LIMIT_HITS_TOTAL
 from app.core.security import TokenError, decode_token
 from app.db import get_session
@@ -27,6 +27,12 @@ async def get_current_user(
     user = await session.get(User, payload["sub"])
     if user is None or not user.is_active:
         raise UnauthorizedError("user not found or inactive")
+    return user
+
+
+async def require_admin(user: User = Depends(get_current_user)) -> User:
+    if user.role != "admin":
+        raise ForbiddenError("admin role required")
     return user
 
 
