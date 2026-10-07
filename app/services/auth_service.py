@@ -1,5 +1,6 @@
 import logging
 from datetime import UTC, datetime
+from urllib.parse import urlencode
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,6 +10,7 @@ from app.core.errors import (
     ConflictError,
     EmailDomainUnreachableError,
     InvalidEmailDomainError,
+    ServiceUnavailableError,
     UnauthorizedError,
 )
 from app.core.security import (
@@ -28,6 +30,7 @@ from app.guardrails.email import (
 from app.models.token import RevokedToken
 from app.models.user import User
 from app.schemas.auth import EmailCheckResponse, TokenResponse, UserResponse
+from app.services import github_oauth_client
 
 logger = logging.getLogger(__name__)
 
@@ -88,8 +91,66 @@ def _issue_tokens(user_id: str) -> TokenResponse:
 
 async def authenticate_user(session: AsyncSession, email: str, password: str) -> TokenResponse:
     user = await session.scalar(select(User).where(User.email == email))
-    if user is None or not verify_password(password, user.hashed_password):
+    # An OAuth-only user has no hashed_password - fall through to the same
+    # generic "invalid email or password" rather than crashing on None.
+    if user is None or user.hashed_password is None:
         raise UnauthorizedError("invalid email or password")
+    if not verify_password(password, user.hashed_password):
+        raise UnauthorizedError("invalid email or password")
+    if not user.is_active:
+        raise UnauthorizedError("account is disabled")
+    return _issue_tokens(user.id)
+
+
+def build_github_authorize_url(state: str) -> str:
+    settings = get_settings()
+    if not settings.github_client_id:
+        raise ServiceUnavailableError("GitHub login is not configured on this server")
+
+    params = {
+        "client_id": settings.github_client_id,
+        "redirect_uri": settings.github_oauth_redirect_uri,
+        "scope": "user:email",
+        "state": state,
+    }
+    return f"https://github.com/login/oauth/authorize?{urlencode(params)}"
+
+
+async def authenticate_with_github(session: AsyncSession, code: str) -> TokenResponse:
+    settings = get_settings()
+    if not settings.github_client_id or not settings.github_client_secret:
+        raise ServiceUnavailableError("GitHub login is not configured on this server")
+
+    github_token = await github_oauth_client.exchange_code_for_token(
+        code=code,
+        client_id=settings.github_client_id,
+        client_secret=settings.github_client_secret,
+        redirect_uri=settings.github_oauth_redirect_uri,
+    )
+    profile = await github_oauth_client.fetch_profile(github_token)
+
+    user = await session.scalar(
+        select(User).where(User.oauth_provider == "github", User.oauth_subject == profile.subject)
+    )
+    if user is None:
+        # No account linked to this GitHub identity yet. If an account already
+        # exists for the same (verified) email - e.g. they originally signed up
+        # with a password - link GitHub to it rather than failing on the
+        # unique email constraint or leaving the user with two accounts.
+        user = await session.scalar(select(User).where(User.email == profile.email))
+        if user is not None:
+            user.oauth_provider = "github"
+            user.oauth_subject = profile.subject
+        else:
+            user = User(
+                email=profile.email,
+                hashed_password=None,
+                oauth_provider="github",
+                oauth_subject=profile.subject,
+            )
+            session.add(user)
+        await session.commit()
+
     if not user.is_active:
         raise UnauthorizedError("account is disabled")
     return _issue_tokens(user.id)

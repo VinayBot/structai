@@ -57,6 +57,8 @@ def test_build_endpoints_resolves_summary_and_tags() -> None:
         ("POST", "/api/v1/auth/refresh"),
         ("POST", "/api/v1/auth/logout"),
         ("GET", "/api/v1/auth/me"),
+        ("GET", "/api/v1/auth/github/login"),
+        ("POST", "/api/v1/auth/github/callback"),
     }
     for endpoint in endpoints:
         assert endpoint.tags == ["auth"]

@@ -63,3 +63,15 @@ class UserResponse(BaseModel):
     id: str
     email: str
     role: str
+
+
+class GithubAuthorizeResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    authorize_url: str
+
+
+class GithubCallbackRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    code: str = Field(min_length=1)

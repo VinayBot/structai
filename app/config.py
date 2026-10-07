@@ -15,6 +15,14 @@ class Settings(BaseSettings):
     jwt_access_expire_min: int = 15
     jwt_refresh_expire_days: int = 7
 
+    # GitHub OAuth login - register an OAuth App at
+    # https://github.com/settings/developers with callback URL
+    # {github_oauth_redirect_uri}. Login is disabled (503) while client_id/secret
+    # are blank. See docs/API.md.
+    github_client_id: str = ""
+    github_client_secret: str = ""
+    github_oauth_redirect_uri: str = "http://localhost:5173/auth/github/callback"
+
     # Database
     database_url: str = "sqlite+aiosqlite:///./data/structai.db"
 

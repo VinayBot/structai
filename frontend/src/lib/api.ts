@@ -179,6 +179,17 @@ export const authApi = {
   me: () => request<User>('/api/v1/auth/me'),
   logout: (refreshToken: string) =>
     request<void>('/api/v1/auth/logout', { method: 'POST', body: { refresh_token: refreshToken } }),
+  githubLogin: (state: string) =>
+    request<{ authorize_url: string }>(
+      `/api/v1/auth/github/login?state=${encodeURIComponent(state)}`,
+      { auth: false },
+    ),
+  githubCallback: (code: string) =>
+    request<TokenResponse>('/api/v1/auth/github/callback', {
+      method: 'POST',
+      body: { code },
+      auth: false,
+    }),
 }
 
 export const schemaApi = {

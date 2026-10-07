@@ -25,6 +25,8 @@ Every error response — from an `AppError` subclass, a Pydantic validation fail
 | `payload_too_large` | 413 | `PayloadTooLargeError` | Upload/generated file exceeds `max_upload_size_bytes` |
 | `unsupported_media_type` | 415 | `UnsupportedMediaTypeError` | Upload `content_type` isn't on `allowed_upload_content_types` |
 | `forbidden` | 403 | `ForbiddenError` | Authenticated, but `require_admin` rejected a non-admin caller |
+| `oauth_failed` | 502 | `OAuthError` | GitHub rejected the authorization code, or its API failed unexpectedly |
+| `service_unavailable` | 503 | `ServiceUnavailableError` | GitHub login hit while `GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET` are unset |
 | `invalid_schema` | 400 | explicit in `routes/schemas.py` | User-supplied `SchemaDef` can't compile into a model |
 | `invalid_email_domain` | 422 | `InvalidEmailDomainError` | Email guardrail: malformed domain, or a likely typo of a popular provider (`suggestion` populated for typos) |
 | `email_domain_unreachable` | 422 | `EmailDomainUnreachableError` | Email guardrail: domain has no MX/A/AAAA record (confirmed can't receive mail) |
@@ -46,8 +48,12 @@ Every error response — from an `AppError` subclass, a Pydantic validation fail
 | `POST /api/v1/auth/refresh` | none (refresh token is the credential) | `{refresh_token}` | `200` same token shape | Revokes the presented token's `jti`, issues a fresh pair; `401` if expired/revoked/invalid |
 | `POST /api/v1/auth/logout` | none (acts on the token) | `{refresh_token}` | `204` | Revokes the token's `jti` |
 | `GET /api/v1/auth/me` | required | — | `200` `{id, email, role}` | |
+| `GET /api/v1/auth/github/login?state=` | none | — | `200` `{authorize_url}` | `state` (8–128 chars) is generated and later verified by the *caller* (the frontend round-trips it through GitHub via `sessionStorage`) - this endpoint just builds the URL around it, so the backend stays stateless. `503 service_unavailable` if GitHub OAuth isn't configured. |
+| `POST /api/v1/auth/github/callback` | none | `{code}` | `200` `{access_token, refresh_token, token_type}` | Exchanges `code` with GitHub, fetches the profile (falling back to `/user/emails` if the primary address is private), and finds-or-creates a `User`. An existing password account with the same verified email gets GitHub linked to it rather than erroring. `502 oauth_failed` if GitHub rejects the code or its API fails; `503 service_unavailable` if not configured. |
 
 `POST /api/v1/auth/register` does **not** return tokens — call `/api/v1/auth/login` separately to obtain them.
+
+**Setting up GitHub login:** register an OAuth App at [github.com/settings/developers](https://github.com/settings/developers) with callback URL `http://localhost:5173/auth/github/callback` (or your deployed frontend origin + `/auth/github/callback`), then set `GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET`/`GITHUB_OAUTH_REDIRECT_URI` in `.env`. The login button degrades to a clear `503` error, not a crash, while unconfigured.
 
 ---
 
@@ -238,7 +244,7 @@ Every endpoint here requires `require_admin` (`app/core/deps.py`) in addition to
 
 | Guard | Dependency | Applies to |
 |---|---|---|
-| JWT auth | `get_current_user` | everything except `/api/v1/auth/register`, `/api/v1/auth/check-email`, `/api/v1/auth/login`, `/api/v1/auth/refresh`, `/api/v1/auth/logout`, `/health`, `/ready`, `/metrics` |
+| JWT auth | `get_current_user` | everything except `/api/v1/auth/register`, `/api/v1/auth/check-email`, `/api/v1/auth/login`, `/api/v1/auth/refresh`, `/api/v1/auth/logout`, `/api/v1/auth/github/login`, `/api/v1/auth/github/callback`, `/health`, `/ready`, `/metrics` |
 | Admin role | `require_admin` | `/api/v1/admin/*` |
 | Per-minute rate limit | `enforce_rate_limit` | `POST /api/v1/structured/answer(+stream)` |
 | Daily quota | `enforce_daily_quota` | same endpoints |

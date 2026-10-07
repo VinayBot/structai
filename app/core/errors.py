@@ -99,6 +99,16 @@ class UnsupportedMediaTypeError(AppError):
     status_code = status.HTTP_415_UNSUPPORTED_MEDIA_TYPE
 
 
+class OAuthError(AppError):
+    code = "oauth_failed"
+    status_code = status.HTTP_502_BAD_GATEWAY
+
+
+class ServiceUnavailableError(AppError):
+    code = "service_unavailable"
+    status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+
+
 def _error_body(
     code: str,
     message: str,

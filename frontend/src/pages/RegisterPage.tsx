@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { motion, useReducedMotion } from 'framer-motion'
 import { ApiError, authApi } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
+import { GithubLoginButton } from '../components/auth/GithubLoginButton'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { Input } from '../components/ui/Input'
@@ -143,6 +144,12 @@ export function RegisterPage() {
               {submitting ? 'Creating account…' : 'Sign up'}
             </Button>
           </form>
+          <div className="my-4 flex items-center gap-3 text-xs text-text-dim">
+            <span className="h-px flex-1 bg-border" />
+            or
+            <span className="h-px flex-1 bg-border" />
+          </div>
+          <GithubLoginButton />
           <p className="mt-4 text-center text-sm text-text-dim">
             Already have an account?{' '}
             <Link to="/login" className="text-accent hover:underline">

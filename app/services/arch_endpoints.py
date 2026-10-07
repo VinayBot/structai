@@ -44,6 +44,8 @@ _NODE_ROUTES: dict[str, list[tuple[str, str, bool]]] = {
         ("POST", "/api/v1/auth/refresh", False),
         ("POST", "/api/v1/auth/logout", False),
         ("GET", "/api/v1/auth/me", True),
+        ("GET", "/api/v1/auth/github/login", False),
+        ("POST", "/api/v1/auth/github/callback", False),
     ],
     "schema_builder": [
         ("POST", "/api/v1/schemas/validate", True),

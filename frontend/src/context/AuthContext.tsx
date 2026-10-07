@@ -7,6 +7,7 @@ interface AuthContextValue {
   loading: boolean
   login: (email: string, password: string) => Promise<void>
   register: (email: string, password: string) => Promise<void>
+  loginWithGithub: (code: string) => Promise<void>
   logout: () => Promise<void>
 }
 
@@ -44,6 +45,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await login(email, password)
   }
 
+  async function loginWithGithub(code: string) {
+    const tokens = await authApi.githubCallback(code)
+    setTokens(tokens)
+    setUser(await authApi.me())
+  }
+
   async function logout() {
     const refreshToken = getRefreshToken()
     try {
@@ -55,7 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, loginWithGithub, logout }}>
       {children}
     </AuthContext.Provider>
   )
