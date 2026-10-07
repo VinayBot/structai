@@ -15,7 +15,7 @@ StructAI ships two complementary ways to measure "does this actually work," plus
 | `classification` | 4 | Picking one label from a closed set |
 | `multi_field` | 3 | Schemas with 3+ fields in one response |
 
-Each case is a prompt + the exact `schema_def` shape `/schemas/validate` and `/structured/answer` accept, plus one or more content checks (`equals` / `contains` / `one_of`) run against the validated response fields — not just "did it validate," but "did it answer correctly."
+Each case is a prompt + the exact `schema_def` shape `/api/v1/schemas/validate` and `/api/v1/structured/answer` accept, plus one or more content checks (`equals` / `contains` / `one_of`) run against the validated response fields — not just "did it validate," but "did it answer correctly."
 
 `eval/runner.py::run_eval()` drives all 25 cases concurrently (bounded by an `asyncio.Semaphore`) through either the real multi-provider `ModelGateway` or a single pinned provider, and aggregates pass rate, average/p95 latency, and average retry-loop attempts, overall and per-category.
 
@@ -51,7 +51,7 @@ Latest run: 15/15 succeeded, 0 rate-limited, 0 errors, p50 2.4s / p95 4.3s / max
 
 ## 2. In-app Evaluation tab
 
-The **Evaluation** tab in the web app (`frontend/src/pages/EvaluationPage.tsx`) is the same harness, live: pick which of the 25 golden cases to run, a provider (`gateway` / `ollama` / `groq`), and a concurrency level, then press Run. Results stream in via `POST /eval/run/stream` (Server-Sent Events) — each case flips to pass/fail with its latency as soon as it finishes, rather than waiting for all 25 — and a final report (pass rate, avg/p95 latency, avg attempts, by-category breakdown) renders once the run completes. Cancel aborts the in-flight stream via `AbortController`.
+The **Evaluation** tab in the web app (`frontend/src/pages/EvaluationPage.tsx`) is the same harness, live: pick which of the 25 golden cases to run, a provider (`gateway` / `ollama` / `groq`), and a concurrency level, then press Run. Results stream in via `POST /api/v1/eval/run/stream` (Server-Sent Events) — each case flips to pass/fail with its latency as soon as it finishes, rather than waiting for all 25 — and a final report (pass rate, avg/p95 latency, avg attempts, by-category breakdown) renders once the run completes. Cancel aborts the in-flight stream via `AbortController`.
 
 This is the fastest way to re-check the numbers above after changing a prompt, a model default, or the gateway's retry logic, without leaving the browser.
 
@@ -60,4 +60,4 @@ This is the fastest way to re-check the numbers above after changing a prompt, a
 - Golden cases are hand-written and English-only; there's no held-out "unseen" set, so passing 25/25 means "matches our own expectations," not "generalizes to novel inputs."
 - The in-process harness (`eval/runner.py`) calls services directly — fast, but doesn't exercise the HTTP/auth/guardrail layer. `load_test.py` covers that separately, but the two tools don't share a single combined report.
 - `--compare` only compares Ollama vs. Groq as configured providers, not individual model variants within a provider (e.g. it won't A/B two different Groq models in one run).
-- `/eval/*` has no rate limit or daily quota (a deliberate scope decision, since it's treated as an authenticated operator/demo tool, not end-user traffic).
+- `/api/v1/eval/*` has no rate limit or daily quota (a deliberate scope decision, since it's treated as an authenticated operator/demo tool, not end-user traffic).

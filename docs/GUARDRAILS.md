@@ -4,7 +4,7 @@ Everything between a user's prompt and a model call, and between a model's answe
 
 ## Request-flow summary (the structured-answer paths, most heavily guarded)
 
-`POST /structured/answer` and `POST /structured/answer/stream` both run the same shared `guard_prompt()` chain (`app/guardrails/prompt_guard.py`) in order:
+`POST /api/v1/structured/answer` and `POST /api/v1/structured/answer/stream` both run the same shared `guard_prompt()` chain (`app/guardrails/prompt_guard.py`) in order:
 
 1. `get_current_user` — JWT auth.
 2. `enforce_rate_limit` — per-user, 20 requests/min.
@@ -20,7 +20,7 @@ A case-insensitive regex/keyword heuristic — no ML classifier. Flags prompts m
 
 On trigger: raises `GuardrailError` → **HTTP 400**, `code: "guardrail_blocked"`, and increments both `structai_guardrail_blocks_total{reason="injection"}` and `structai_injection_blocks_total{category}`.
 
-Runs in the route handler *before* any provider call — on both `/structured/answer` and `/structured/answer/stream`, via `guard_prompt()`. For the streaming endpoint specifically, the check happens before the `StreamingResponse` is constructed at all, since Starlette sends the HTTP status line before the body generator first runs — a check inside the generator couldn't surface as a clean 400.
+Runs in the route handler *before* any provider call — on both `/api/v1/structured/answer` and `/api/v1/structured/answer/stream`, via `guard_prompt()`. For the streaming endpoint specifically, the check happens before the `StreamingResponse` is constructed at all, since Starlette sends the HTTP status line before the body generator first runs — a check inside the generator couldn't surface as a clean 400.
 
 **Known limitation:** the MCP server's `ask_structured`/`send_message` tools use their own, separate `_guard_prompt()` in `app/mcp/server.py`, still on the legacy `is_prompt_injection() -> bool` check with only the aggregate metric, not the categorized one above — a pre-existing inconsistency not yet unified with the shared helper.
 
@@ -51,7 +51,7 @@ A `PII_MODE` setting (`.env`, default `redact`) controls what happens when PII i
 
 Redaction happens **before the prompt reaches the model**, not just before logging — `guard_prompt()` redacts first and the clean string is what's actually sent to the gateway/provider. Trace span attributes only ever hold `tier`/`attempt`/`provider`/`model`, never prompt text, and nothing in `app/services/*.py` or `app/routes/*.py` logs raw prompt/response content (verified: the only `logging.getLogger()` call anywhere in `app/` is inside `configure_logging()` itself — see [OBSERVABILITY.md](OBSERVABILITY.md#3-structured-logging)).
 
-Applied uniformly to `/structured/answer(+stream)` via the shared `guard_prompt()` helper. **Known gap:** chat message persistence (`chat_service.py`) still stores message content as-is — redaction only runs on the generation-request path, not on messages saved directly via `POST /chats/{id}/messages` or the MCP `send_message` tool.
+Applied uniformly to `/api/v1/structured/answer(+stream)` via the shared `guard_prompt()` helper. **Known gap:** chat message persistence (`chat_service.py`) still stores message content as-is — redaction only runs on the generation-request path, not on messages saved directly via `POST /api/v1/chats/{id}/messages` or the MCP `send_message` tool.
 
 **Why:** defense-in-depth so personal data never reaches a third-party model provider (Groq) or ends up in a log/trace, per the project rule to never log raw prompts or PII.
 
@@ -61,7 +61,7 @@ Applied uniformly to `/structured/answer(+stream)` via the shared `guard_prompt(
 
 A sliding 60-second window, in-memory, keyed by **user id** (not device, not IP) — see `app/core/deps.py::enforce_rate_limit`. Default limit: **20 requests/minute** (`RATE_LIMIT_PER_MIN` in `.env`). Exceeding it raises `RateLimitExceededError` → **HTTP 429**, `code: "rate_limited"`, and increments `structai_rate_limit_hits_total`.
 
-Applied to `/structured/answer(+stream)`. Deliberately **not** applied to `/eval/*` — that's treated as an authenticated operator/demo tool, not end-user traffic.
+Applied to `/api/v1/structured/answer(+stream)`. Deliberately **not** applied to `/api/v1/eval/*` — that's treated as an authenticated operator/demo tool, not end-user traffic.
 
 **Known limitation:** in-memory and per-process — doesn't survive a restart and isn't shared across multiple API instances.
 
@@ -75,7 +75,7 @@ Defaults: **30/day per user** (`DAILY_QUOTA_USER`). Exceeding it raises the same
 
 Implemented as a single atomic `INSERT ... ON CONFLICT DO UPDATE ... RETURNING` rather than a read-then-write pair, specifically because the original SELECT-then-INSERT version let two concurrent requests for the same user/day both see "no row yet" and race to insert — which surfaced as a real unhandled `IntegrityError` under `scripts/load_test.py` at concurrency 5 (caught and fixed in Phase 8; see `tests/unit/test_quota_service.py::test_concurrent_requests_increment_atomically_without_crashing`, which reproduces the race with 10 genuinely separate sessions).
 
-Read-only visibility: `GET /usage` returns today's user count against its limit.
+Read-only visibility: `GET /api/v1/usage` returns today's user count against its limit.
 
 **Why:** a longer-horizon cost/abuse ceiling independent of short bursts.
 
@@ -92,8 +92,8 @@ Four checks, in order, each cheaper/more certain than the next so an obviously b
 
 Two entry points share this same check:
 
-- `POST /auth/register` — `register_user` runs it before creating the account; a failing check raises the error class mapped from `EmailCheckResult.error_code` (see table below) and increments `structai_email_guardrail_blocks_total{reason=<error_code>}` plus the aggregate `structai_guardrail_blocks_total{reason="email"}`. An MX fail-open warning is logged (not raised) and registration proceeds.
-- `POST /auth/check-email` — same guardrail, read-only (`check_email_address`): never creates an account, never rate-limited or quota-counted on its own. Lets the frontend validate-on-blur before the user submits the form. Response shape: `{"valid", "message", "suggestion", "warning"}`.
+- `POST /api/v1/auth/register` — `register_user` runs it before creating the account; a failing check raises the error class mapped from `EmailCheckResult.error_code` (see table below) and increments `structai_email_guardrail_blocks_total{reason=<error_code>}` plus the aggregate `structai_guardrail_blocks_total{reason="email"}`. An MX fail-open warning is logged (not raised) and registration proceeds.
+- `POST /api/v1/auth/check-email` — same guardrail, read-only (`check_email_address`): never creates an account, never rate-limited or quota-counted on its own. Lets the frontend validate-on-blur before the user submits the form. Response shape: `{"valid", "message", "suggestion", "warning"}`.
 
 **Why:** disposable addresses are a common way to spin up throwaway accounts that bypass the per-user quota guardrail; typo detection catches the far more common case of a legitimate user mistyping their own address and otherwise locking themselves out of their new account with no way to log back in; the MX check catches domains that plainly can't receive mail at all, without turning a flaky DNS resolver into a signup outage.
 
@@ -115,8 +115,8 @@ All error bodies follow `{"error": {"code", "message", "request_id", "retry_afte
 ## Known limitations
 
 - Injection screening is a fixed keyword/regex list — not exhaustive, and easy to evade with paraphrasing; it's a first line of defense, not a guarantee.
-- The MCP server's `ask_structured`/`send_message` tools still use their own separate, legacy `_guard_prompt()` (bool-only injection check, no categorized metric) rather than the shared `app/guardrails/prompt_guard.py::guard_prompt()` used by `/structured/answer` and `/structured/answer/stream` — a pre-existing inconsistency, not yet unified.
-- PII redaction isn't applied uniformly: chat message persistence (direct `POST /chats/{id}/messages` writes, and the MCP `send_message` tool) still skips it — only `/structured/answer(+stream)` is covered.
+- The MCP server's `ask_structured`/`send_message` tools still use their own separate, legacy `_guard_prompt()` (bool-only injection check, no categorized metric) rather than the shared `app/guardrails/prompt_guard.py::guard_prompt()` used by `/api/v1/structured/answer` and `/api/v1/structured/answer/stream` — a pre-existing inconsistency, not yet unified.
+- PII redaction isn't applied uniformly: chat message persistence (direct `POST /api/v1/chats/{id}/messages` writes, and the MCP `send_message` tool) still skips it — only `/api/v1/structured/answer(+stream)` is covered.
 - Rate limiting is in-memory/per-process, not shared across instances.
 - The email guardrail's disposable-domain and popular-provider lists are finite (built-in + optional file); a domain not on either list is neither blocked nor typo-checked.
-- `POST /auth/check-email` has no rate-limiting or quota of its own — a deliberate scope decision (it's a cheap, side-effect-free read used for inline form validation), but it means it could in principle be hit at a higher rate than `/auth/register` itself.
+- `POST /api/v1/auth/check-email` has no rate-limiting or quota of its own — a deliberate scope decision (it's a cheap, side-effect-free read used for inline form validation), but it means it could in principle be hit at a higher rate than `/api/v1/auth/register` itself.
