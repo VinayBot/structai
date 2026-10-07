@@ -64,18 +64,30 @@ from app.services.auth_service import register_user
 _GROUPS = [
     # --- Row 0: top-left corner, unchanged content --------------------------
     ArchGroup(
-        id="containerization_ci", label="Containerization & CI", tag="CI/CD",
-        color="neutral", order=0, row=0,
+        id="containerization_ci",
+        label="Containerization & CI",
+        tag="CI/CD",
+        color="neutral",
+        order=0,
+        row=0,
     ),
     ArchGroup(
-        id="backend_runtime_group", label="Backend Runtime", tag="RUNTIME",
-        color="neutral", order=1, row=0,
+        id="backend_runtime_group",
+        label="Backend Runtime",
+        tag="RUNTIME",
+        color="neutral",
+        order=1,
+        row=0,
     ),
     # --- Row 1: the main request pipeline, left to right --------------------
     ArchGroup(id="client_apps", label="Client Apps", tag="CLIENT", color="neutral", order=0, row=1),
     ArchGroup(
-        id="security_guardrails", label="Security & Guardrails", tag="SECURITY",
-        color="purple", order=1, row=1,
+        id="security_guardrails",
+        label="Security & Guardrails",
+        tag="SECURITY",
+        color="purple",
+        order=1,
+        row=1,
     ),
     ArchGroup(id="structai_core", label="StructAI Core", tag="CORE", color="gold", order=2, row=1),
     ArchGroup(id="gateway_group", label="Gateway", tag="GATEWAY", color="gold", order=3, row=1),
@@ -83,16 +95,30 @@ _GROUPS = [
     # --- Row 2: data/storage/observability, mostly extras -------------------
     ArchGroup(id="databases", label="Databases", tag="DATA", color="neutral", order=0, row=2),
     ArchGroup(
-        id="file_storage_group", label="File Storage", tag="STORAGE",
-        color="neutral", order=1, row=2, is_extra=True,
-    ),
-    ArchGroup(
-        id="multi_cloud_group", label="Multi-Cloud", tag="CLOUD", color="neutral", order=2, row=2,
+        id="file_storage_group",
+        label="File Storage",
+        tag="STORAGE",
+        color="neutral",
+        order=1,
+        row=2,
         is_extra=True,
     ),
     ArchGroup(
-        id="observability_evaluation", label="Observability & Evaluation", tag="INSIGHT",
-        color="gold", order=3, row=2,
+        id="multi_cloud_group",
+        label="Multi-Cloud",
+        tag="CLOUD",
+        color="neutral",
+        order=2,
+        row=2,
+        is_extra=True,
+    ),
+    ArchGroup(
+        id="observability_evaluation",
+        label="Observability & Evaluation",
+        tag="INSIGHT",
+        color="gold",
+        order=3,
+        row=2,
     ),
 ]
 
@@ -410,8 +436,7 @@ _NODES = [
         icon="shieldAlert",
         visual_kind="tile",
         guardrails=["prompt-injection pattern screen"],
-        telemetry="guardrail_blocks_total{reason=injection}, "
-        "injection_blocks_total{category}",
+        telemetry="guardrail_blocks_total{reason=injection}, injection_blocks_total{category}",
     ),
     ArchNode(
         id="pii_redaction",
@@ -1398,7 +1423,12 @@ async def run_scenario(scenario_id: ScenarioId) -> TestRunResponse:
         else:
             steps.append(
                 _step(
-                    "injection_screen", None, "injection screen", "ok", "no match", t,
+                    "injection_screen",
+                    None,
+                    "injection screen",
+                    "ok",
+                    "no match",
+                    t,
                     request=request_payload,
                 )
             )

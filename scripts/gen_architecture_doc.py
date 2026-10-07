@@ -37,7 +37,7 @@ def to_mermaid(graph: GraphResponse) -> str:
         else:
             prefix = ""
         arrow = ARROW_BY_KIND[edge.kind]
-        lines.append(f'  {edge.source} {arrow}|{sanitize(prefix + edge.label)}| {edge.target}')
+        lines.append(f"  {edge.source} {arrow}|{sanitize(prefix + edge.label)}| {edge.target}")
     return "\n".join(lines)
 
 

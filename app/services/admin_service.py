@@ -41,7 +41,5 @@ async def list_usage_today(
     )
 
     total = await session.scalar(select(func.count()).select_from(base.subquery())) or 0
-    rows = await session.execute(
-        base.order_by(QuotaUsage.count.desc()).limit(limit).offset(offset)
-    )
+    rows = await session.execute(base.order_by(QuotaUsage.count.desc()).limit(limit).offset(offset))
     return [(row[0], row[1], row[2]) for row in rows], total

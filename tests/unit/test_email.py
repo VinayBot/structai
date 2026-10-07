@@ -17,9 +17,10 @@ _DATA_DIR = Path(__file__).resolve().parents[1] / "data"
 
 
 def _email_block_total(reason: str) -> float:
-    return REGISTRY.get_sample_value(
-        "structai_email_guardrail_blocks_total", {"reason": reason}
-    ) or 0.0
+    return (
+        REGISTRY.get_sample_value("structai_email_guardrail_blocks_total", {"reason": reason})
+        or 0.0
+    )
 
 
 def _guardrail_block_total(reason: str) -> float:

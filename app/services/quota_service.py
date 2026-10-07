@@ -11,9 +11,7 @@ def _today() -> str:
     return datetime.now(UTC).strftime("%Y-%m-%d")
 
 
-async def check_and_increment(
-    session: AsyncSession, *, scope: str, key: str, limit: int
-) -> None:
+async def check_and_increment(session: AsyncSession, *, scope: str, key: str, limit: int) -> None:
     """Atomically increments today's usage counter and raises once it exceeds limit.
 
     Uses a single INSERT ... ON CONFLICT DO UPDATE statement rather than a

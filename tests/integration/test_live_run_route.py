@@ -26,9 +26,7 @@ def _body(**overrides) -> dict:
 
 async def _collect_events(client, headers, body):
     events = []
-    async with client.stream(
-        "POST", "/arch/live-run", json=body, headers=headers
-    ) as resp:
+    async with client.stream("POST", "/arch/live-run", json=body, headers=headers) as resp:
         status = resp.status_code
         async for line in resp.aiter_lines():
             if line.startswith("data: "):
@@ -275,9 +273,7 @@ async def test_live_run_output_pii_block_mode_fails_output_guardrails_node(
         {"fast": [ProviderCandidate(fake, "fake-model")]}
     )
 
-    status, events = await _collect_events(
-        client, auth_headers, _body(pii_mode="block")
-    )
+    status, events = await _collect_events(client, auth_headers, _body(pii_mode="block"))
 
     assert status == 200
     terminal = events[-1]

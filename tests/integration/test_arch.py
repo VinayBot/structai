@@ -244,9 +244,7 @@ async def test_run_scenario_pii_redacted():
     assert result.passed is True
     assert result.badge == "real_call"
     assert result.contract.valid is True
-    redaction_assertion = next(
-        a for a in result.assertions if "raw email address" in a.name
-    )
+    redaction_assertion = next(a for a in result.assertions if "raw email address" in a.name)
     assert redaction_assertion.passed is True
     assert "[REDACTED_EMAIL]" in redaction_assertion.actual
     call_step = next(s for s in result.steps if s.request is not None)
@@ -291,8 +289,6 @@ async def test_negative_control_pii_redacted_detects_a_disabled_redactor(monkeyp
     monkeypatch.setattr(arch_service, "scan_pii", lambda text: _InertScan(text))
     result = await arch_service.run_scenario("pii_redacted")
     assert result.passed is False
-    redaction_assertion = next(
-        a for a in result.assertions if "raw email address" in a.name
-    )
+    redaction_assertion = next(a for a in result.assertions if "raw email address" in a.name)
     assert redaction_assertion.passed is False
     assert "jane.doe@example.com" in redaction_assertion.actual

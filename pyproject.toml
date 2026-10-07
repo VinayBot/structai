@@ -25,13 +25,14 @@ dependencies = [
 [project.scripts]
 structai-mcp = "app.mcp.server:main"
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.24",
     "pytest-cov>=5.0",
     "ruff>=0.6",
     "mypy>=1.11",
+    "pre-commit>=3.8",
 ]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

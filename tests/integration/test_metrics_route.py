@@ -26,9 +26,7 @@ async def test_metrics_summary_reflects_real_requests(client, auth_headers):
 
 
 @pytest.mark.asyncio
-async def test_metrics_summary_reports_structured_answer_provider_calls(
-    app, client, auth_headers
-):
+async def test_metrics_summary_reports_structured_answer_provider_calls(app, client, auth_headers):
     from app.gateway.factory import get_gateway
     from app.gateway.router import ModelGateway, ProviderCandidate
     from tests.harness.fake_provider import FakeProvider
