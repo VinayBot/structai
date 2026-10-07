@@ -37,7 +37,7 @@ async def test_metrics_summary_reports_structured_answer_provider_calls(app, cli
     )
 
     body = {"prompt": "say hi", "schema_def": _SCHEMA_BODY}
-    answer_resp = await client.post("/structured/answer", json=body, headers=auth_headers)
+    answer_resp = await client.post("/api/v1/structured/answer", json=body, headers=auth_headers)
     assert answer_resp.status_code == 200
 
     resp = await client.get("/metrics/summary", headers=auth_headers)

@@ -4,7 +4,7 @@ import pytest
 @pytest.mark.asyncio
 async def test_validate_requires_auth(client):
     resp = await client.post(
-        "/schemas/validate", json={"fields": [{"name": "x", "type": "string"}]}
+        "/api/v1/schemas/validate", json={"fields": [{"name": "x", "type": "string"}]}
     )
     assert resp.status_code == 401
 
@@ -12,7 +12,7 @@ async def test_validate_requires_auth(client):
 @pytest.mark.asyncio
 async def test_validate_returns_json_schema(client, auth_headers):
     resp = await client.post(
-        "/schemas/validate",
+        "/api/v1/schemas/validate",
         json={
             "fields": [
                 {"name": "title", "type": "string"},
@@ -31,7 +31,7 @@ async def test_validate_returns_json_schema(client, auth_headers):
 @pytest.mark.asyncio
 async def test_validate_rejects_bad_field_type(client, auth_headers):
     resp = await client.post(
-        "/schemas/validate",
+        "/api/v1/schemas/validate",
         json={"fields": [{"name": "title", "type": "not_a_type"}]},
         headers=auth_headers,
     )
@@ -41,7 +41,7 @@ async def test_validate_rejects_bad_field_type(client, auth_headers):
 @pytest.mark.asyncio
 async def test_validate_response_matches_schema_validate_response_shape(client, auth_headers):
     resp = await client.post(
-        "/schemas/validate",
+        "/api/v1/schemas/validate",
         json={"fields": [{"name": "title", "type": "string"}]},
         headers=auth_headers,
     )

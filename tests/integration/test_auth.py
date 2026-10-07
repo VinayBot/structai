@@ -3,7 +3,7 @@ from app.config import get_settings
 
 
 async def _register(client, email="alice@example.com", password="password123"):
-    return await client.post("/auth/register", json={"email": email, "password": password})
+    return await client.post("/api/v1/auth/register", json={"email": email, "password": password})
 
 
 async def test_register_creates_user(client):
@@ -71,18 +71,18 @@ async def test_register_respects_email_check_mx_setting_disabled(client, monkeyp
 
 
 async def test_check_email_endpoint_accepts_valid_address_without_creating_account(client):
-    resp = await client.post("/auth/check-email", json={"email": "newuser@example.com"})
+    resp = await client.post("/api/v1/auth/check-email", json={"email": "newuser@example.com"})
     assert resp.status_code == 200
     assert resp.json()["valid"] is True
 
     login = await client.post(
-        "/auth/login", json={"email": "newuser@example.com", "password": "whatever123"}
+        "/api/v1/auth/login", json={"email": "newuser@example.com", "password": "whatever123"}
     )
     assert login.status_code == 401
 
 
 async def test_check_email_endpoint_flags_disposable_domain(client):
-    resp = await client.post("/auth/check-email", json={"email": "bob@mailinator.com"})
+    resp = await client.post("/api/v1/auth/check-email", json={"email": "bob@mailinator.com"})
     assert resp.status_code == 200
     body = resp.json()
     assert body["valid"] is False
@@ -90,7 +90,7 @@ async def test_check_email_endpoint_flags_disposable_domain(client):
 
 
 async def test_check_email_endpoint_flags_typo_with_suggestion(client):
-    resp = await client.post("/auth/check-email", json={"email": "user@gmial.com"})
+    resp = await client.post("/api/v1/auth/check-email", json={"email": "user@gmial.com"})
     assert resp.status_code == 200
     body = resp.json()
     assert body["valid"] is False
@@ -98,14 +98,14 @@ async def test_check_email_endpoint_flags_typo_with_suggestion(client):
 
 
 async def test_check_email_endpoint_rejects_malformed_syntax_at_the_schema_level(client):
-    resp = await client.post("/auth/check-email", json={"email": "not-an-email"})
+    resp = await client.post("/api/v1/auth/check-email", json={"email": "not-an-email"})
     assert resp.status_code == 422
 
 
 async def test_login_success_returns_tokens(client):
     await _register(client)
     resp = await client.post(
-        "/auth/login", json={"email": "alice@example.com", "password": "password123"}
+        "/api/v1/auth/login", json={"email": "alice@example.com", "password": "password123"}
     )
     assert resp.status_code == 200
     body = resp.json()
@@ -117,30 +117,30 @@ async def test_login_success_returns_tokens(client):
 async def test_login_wrong_password_401(client):
     await _register(client)
     resp = await client.post(
-        "/auth/login", json={"email": "alice@example.com", "password": "wrongpass1"}
+        "/api/v1/auth/login", json={"email": "alice@example.com", "password": "wrongpass1"}
     )
     assert resp.status_code == 401
 
 
 async def test_login_unknown_email_401(client):
     resp = await client.post(
-        "/auth/login", json={"email": "nobody@example.com", "password": "password123"}
+        "/api/v1/auth/login", json={"email": "nobody@example.com", "password": "password123"}
     )
     assert resp.status_code == 401
 
 
 async def test_me_requires_token(client):
-    resp = await client.get("/auth/me")
+    resp = await client.get("/api/v1/auth/me")
     assert resp.status_code == 401
 
 
 async def test_me_with_valid_token_returns_user(client):
     await _register(client)
     login = await client.post(
-        "/auth/login", json={"email": "alice@example.com", "password": "password123"}
+        "/api/v1/auth/login", json={"email": "alice@example.com", "password": "password123"}
     )
     access_token = login.json()["access_token"]
-    resp = await client.get("/auth/me", headers={"Authorization": f"Bearer {access_token}"})
+    resp = await client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {access_token}"})
     assert resp.status_code == 200
     assert resp.json()["email"] == "alice@example.com"
 
@@ -148,38 +148,38 @@ async def test_me_with_valid_token_returns_user(client):
 async def test_me_rejects_refresh_token(client):
     await _register(client)
     login = await client.post(
-        "/auth/login", json={"email": "alice@example.com", "password": "password123"}
+        "/api/v1/auth/login", json={"email": "alice@example.com", "password": "password123"}
     )
     refresh_token = login.json()["refresh_token"]
-    resp = await client.get("/auth/me", headers={"Authorization": f"Bearer {refresh_token}"})
+    resp = await client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {refresh_token}"})
     assert resp.status_code == 401
 
 
 async def test_refresh_rotates_tokens_and_old_refresh_fails(client):
     await _register(client)
     login = await client.post(
-        "/auth/login", json={"email": "alice@example.com", "password": "password123"}
+        "/api/v1/auth/login", json={"email": "alice@example.com", "password": "password123"}
     )
     old_refresh = login.json()["refresh_token"]
 
-    refreshed = await client.post("/auth/refresh", json={"refresh_token": old_refresh})
+    refreshed = await client.post("/api/v1/auth/refresh", json={"refresh_token": old_refresh})
     assert refreshed.status_code == 200
     new_tokens = refreshed.json()
     assert new_tokens["refresh_token"] != old_refresh
 
-    reused = await client.post("/auth/refresh", json={"refresh_token": old_refresh})
+    reused = await client.post("/api/v1/auth/refresh", json={"refresh_token": old_refresh})
     assert reused.status_code == 401
 
 
 async def test_logout_revokes_refresh_token(client):
     await _register(client)
     login = await client.post(
-        "/auth/login", json={"email": "alice@example.com", "password": "password123"}
+        "/api/v1/auth/login", json={"email": "alice@example.com", "password": "password123"}
     )
     refresh_token = login.json()["refresh_token"]
 
-    logout = await client.post("/auth/logout", json={"refresh_token": refresh_token})
+    logout = await client.post("/api/v1/auth/logout", json={"refresh_token": refresh_token})
     assert logout.status_code == 204
 
-    reused = await client.post("/auth/refresh", json={"refresh_token": refresh_token})
+    reused = await client.post("/api/v1/auth/refresh", json={"refresh_token": refresh_token})
     assert reused.status_code == 401

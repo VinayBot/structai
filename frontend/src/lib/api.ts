@@ -138,7 +138,7 @@ async function request<T>(path: string, opts: FetchOptions = {}): Promise<T> {
     body: body !== undefined ? JSON.stringify(body) : undefined,
   })
 
-  if (res.status === 401 && auth && !skipRefresh && path !== '/auth/refresh') {
+  if (res.status === 401 && auth && !skipRefresh && path !== '/api/v1/auth/refresh') {
     const refreshed = await tryRefresh()
     if (refreshed) return request<T>(path, { ...opts, skipRefresh: true })
   }
@@ -152,7 +152,7 @@ async function tryRefresh(): Promise<boolean> {
   const refreshToken = getRefreshToken()
   if (!refreshToken) return false
   try {
-    const tokens = await request<TokenResponse>('/auth/refresh', {
+    const tokens = await request<TokenResponse>('/api/v1/auth/refresh', {
       method: 'POST',
       body: { refresh_token: refreshToken },
       auth: false,
@@ -167,43 +167,43 @@ async function tryRefresh(): Promise<boolean> {
 
 export const authApi = {
   register: (email: string, password: string) =>
-    request<User>('/auth/register', { method: 'POST', body: { email, password }, auth: false }),
+    request<User>('/api/v1/auth/register', { method: 'POST', body: { email, password }, auth: false }),
   checkEmail: (email: string) =>
-    request<EmailCheckResponse>('/auth/check-email', {
+    request<EmailCheckResponse>('/api/v1/auth/check-email', {
       method: 'POST',
       body: { email },
       auth: false,
     }),
   login: (email: string, password: string) =>
-    request<TokenResponse>('/auth/login', { method: 'POST', body: { email, password }, auth: false }),
-  me: () => request<User>('/auth/me'),
+    request<TokenResponse>('/api/v1/auth/login', { method: 'POST', body: { email, password }, auth: false }),
+  me: () => request<User>('/api/v1/auth/me'),
   logout: (refreshToken: string) =>
-    request<void>('/auth/logout', { method: 'POST', body: { refresh_token: refreshToken } }),
+    request<void>('/api/v1/auth/logout', { method: 'POST', body: { refresh_token: refreshToken } }),
 }
 
 export const schemaApi = {
   validate: (schema: SchemaDef) =>
-    request<SchemaValidateResponse>('/schemas/validate', { method: 'POST', body: schema }),
+    request<SchemaValidateResponse>('/api/v1/schemas/validate', { method: 'POST', body: schema }),
 }
 
 export const structuredApi = {
   answer: (body: StructuredAnswerRequest) =>
-    request<StructuredAnswerResponse>('/structured/answer', { method: 'POST', body }),
+    request<StructuredAnswerResponse>('/api/v1/structured/answer', { method: 'POST', body }),
 }
 
 export const projectsApi = {
-  list: () => request<Page<Project>>('/projects'),
-  create: (name: string) => request<Project>('/projects', { method: 'POST', body: { name } }),
-  remove: (id: string) => request<void>(`/projects/${id}`, { method: 'DELETE' }),
+  list: () => request<Page<Project>>('/api/v1/projects'),
+  create: (name: string) => request<Project>('/api/v1/projects', { method: 'POST', body: { name } }),
+  remove: (id: string) => request<void>(`/api/v1/projects/${id}`, { method: 'DELETE' }),
 }
 
 export const chatsApi = {
   list: (projectId?: string) =>
-    request<Page<Chat>>(`/chats${projectId ? `?project_id=${projectId}` : ''}`),
+    request<Page<Chat>>(`/api/v1/chats${projectId ? `?project_id=${projectId}` : ''}`),
   create: (title: string, projectId?: string | null) =>
-    request<Chat>('/chats', { method: 'POST', body: { title, project_id: projectId ?? null } }),
-  get: (id: string) => request<ChatDetail>(`/chats/${id}`),
-  remove: (id: string) => request<void>(`/chats/${id}`, { method: 'DELETE' }),
+    request<Chat>('/api/v1/chats', { method: 'POST', body: { title, project_id: projectId ?? null } }),
+  get: (id: string) => request<ChatDetail>(`/api/v1/chats/${id}`),
+  remove: (id: string) => request<void>(`/api/v1/chats/${id}`, { method: 'DELETE' }),
   addMessage: (
     chatId: string,
     message: {
@@ -213,21 +213,21 @@ export const chatsApi = {
       provider?: string | null
       model?: string | null
     },
-  ) => request<Message>(`/chats/${chatId}/messages`, { method: 'POST', body: message }),
+  ) => request<Message>(`/api/v1/chats/${chatId}/messages`, { method: 'POST', body: message }),
 }
 
 export const evalApi = {
-  cases: () => request<GoldenCase[]>('/eval/cases'),
+  cases: () => request<GoldenCase[]>('/api/v1/eval/cases'),
   /** Non-streaming run — unused by EvaluationPage (which uses streamEvalRun below) but kept for parity with the route. */
-  runSync: (body: EvalRunRequest) => request<EvalReport>('/eval/run', { method: 'POST', body }),
+  runSync: (body: EvalRunRequest) => request<EvalReport>('/api/v1/eval/run', { method: 'POST', body }),
   runs: (limit?: number) =>
-    request<Page<EvalRunSummary>>(`/eval/runs${limit !== undefined ? `?limit=${limit}` : ''}`),
-  runDetail: (id: string) => request<EvalRunDetail>(`/eval/runs/${id}`),
-  dashboard: () => request<EvalDashboardResponse>('/eval/dashboard'),
+    request<Page<EvalRunSummary>>(`/api/v1/eval/runs${limit !== undefined ? `?limit=${limit}` : ''}`),
+  runDetail: (id: string) => request<EvalRunDetail>(`/api/v1/eval/runs/${id}`),
+  dashboard: () => request<EvalDashboardResponse>('/api/v1/eval/dashboard'),
 }
 
 export const tracesApi = {
-  list: (limit = 100) => request<Span[]>(`/traces?limit=${limit}`),
+  list: (limit = 100) => request<Span[]>(`/api/v1/traces?limit=${limit}`),
 }
 
 export const metricsApi = {
@@ -259,7 +259,7 @@ export const filesApi = {
     form.append('file', file)
 
     const query = chatId ? `?chat_id=${encodeURIComponent(chatId)}` : ''
-    return fetch(`${API_BASE}/files${query}`, { method: 'POST', headers, body: form }).then(
+    return fetch(`${API_BASE}/api/v1/files${query}`, { method: 'POST', headers, body: form }).then(
       async (res) => {
         if (!res.ok) throw await parseError(res)
         return (await res.json()) as FileAttachment
@@ -267,20 +267,20 @@ export const filesApi = {
     )
   },
   list: (chatId?: string) =>
-    request<Page<FileAttachment>>(`/files${chatId ? `?chat_id=${chatId}` : ''}`),
-  get: (id: string) => request<FileAttachment>(`/files/${id}`),
-  remove: (id: string) => request<void>(`/files/${id}`, { method: 'DELETE' }),
+    request<Page<FileAttachment>>(`/api/v1/files${chatId ? `?chat_id=${chatId}` : ''}`),
+  get: (id: string) => request<FileAttachment>(`/api/v1/files/${id}`),
+  remove: (id: string) => request<void>(`/api/v1/files/${id}`, { method: 'DELETE' }),
   contentBlobUrl: async (id: string): Promise<string> => {
-    const blob = await fetchAuthedBlob(`/files/${id}/content`)
+    const blob = await fetchAuthedBlob(`/api/v1/files/${id}/content`)
     return URL.createObjectURL(blob)
   },
 }
 
 export const archApi = {
-  graph: () => request<ArchGraphResponse>('/arch/graph'),
-  status: () => request<ArchStatusResponse>('/arch/status'),
+  graph: () => request<ArchGraphResponse>('/api/v1/arch/graph'),
+  status: () => request<ArchStatusResponse>('/api/v1/arch/status'),
   testRun: (scenarioId: ArchScenarioId) =>
-    request<ArchTestRunResponse>('/arch/test-run', {
+    request<ArchTestRunResponse>('/api/v1/arch/test-run', {
       method: 'POST',
       body: { scenario_id: scenarioId },
     }),
@@ -288,7 +288,7 @@ export const archApi = {
 }
 
 export const usageApi = {
-  get: () => request<UsageResponse>('/usage'),
+  get: () => request<UsageResponse>('/api/v1/usage'),
 }
 
 export const healthApi = {
@@ -399,7 +399,7 @@ export function streamStructuredAnswer(
   signal?: AbortSignal,
 ): Promise<void> {
   return streamSse<StreamEvent>(
-    '/structured/answer/stream',
+    '/api/v1/structured/answer/stream',
     { prompt, schema_def: schema, tier },
     onEvent,
     signal,
@@ -411,7 +411,7 @@ export function streamEvalRun(
   onEvent: (event: EvalStreamEvent) => void,
   signal?: AbortSignal,
 ): Promise<void> {
-  return streamSse<EvalStreamEvent>('/eval/run/stream', body, onEvent, signal)
+  return streamSse<EvalStreamEvent>('/api/v1/eval/run/stream', body, onEvent, signal)
 }
 
 export function streamArchLiveRun(
@@ -419,5 +419,5 @@ export function streamArchLiveRun(
   onEvent: (event: ArchLiveRunEvent) => void,
   signal?: AbortSignal,
 ): Promise<void> {
-  return streamSse<ArchLiveRunEvent>('/arch/live-run', body, onEvent, signal)
+  return streamSse<ArchLiveRunEvent>('/api/v1/arch/live-run', body, onEvent, signal)
 }

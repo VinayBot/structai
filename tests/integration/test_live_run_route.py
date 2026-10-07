@@ -26,7 +26,7 @@ def _body(**overrides) -> dict:
 
 async def _collect_events(client, headers, body):
     events = []
-    async with client.stream("POST", "/arch/live-run", json=body, headers=headers) as resp:
+    async with client.stream("POST", "/api/v1/arch/live-run", json=body, headers=headers) as resp:
         status = resp.status_code
         async for line in resp.aiter_lines():
             if line.startswith("data: "):
@@ -36,7 +36,7 @@ async def _collect_events(client, headers, body):
 
 @pytest.mark.asyncio
 async def test_live_run_requires_auth_as_a_plain_401_not_a_stream(client):
-    resp = await client.post("/arch/live-run", json=_body())
+    resp = await client.post("/api/v1/arch/live-run", json=_body())
     assert resp.status_code == 401
     assert resp.headers["content-type"].startswith("application/json")
 
@@ -44,7 +44,7 @@ async def test_live_run_requires_auth_as_a_plain_401_not_a_stream(client):
 @pytest.mark.asyncio
 async def test_live_run_rejects_bad_schema_before_the_stream_opens(client, auth_headers):
     resp = await client.post(
-        "/arch/live-run",
+        "/api/v1/arch/live-run",
         json=_body(schema_def={"fields": [{"name": "_bad", "type": "string"}]}),
         headers=auth_headers,
     )
@@ -423,7 +423,7 @@ async def test_live_run_matches_structured_answer_route(app, client, auth_header
     )
 
     structured_resp = await client.post(
-        "/structured/answer",
+        "/api/v1/structured/answer",
         json={"prompt": "say hello", "schema_def": _SCHEMA_BODY, "tier": "fast"},
         headers=auth_headers,
     )

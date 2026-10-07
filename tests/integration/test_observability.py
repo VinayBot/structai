@@ -23,7 +23,7 @@ async def test_metrics_counts_requests(client):
 
 @pytest.mark.asyncio
 async def test_traces_requires_auth(client):
-    resp = await client.get("/traces")
+    resp = await client.get("/api/v1/traces")
     assert resp.status_code == 401
 
 
@@ -39,9 +39,9 @@ async def test_traces_records_structured_answer_spans(app, client, auth_headers)
     )
 
     body = {"prompt": "say hi", "schema_def": _SCHEMA_BODY}
-    await client.post("/structured/answer", json=body, headers=auth_headers)
+    await client.post("/api/v1/structured/answer", json=body, headers=auth_headers)
 
-    resp = await client.get("/traces", headers=auth_headers)
+    resp = await client.get("/api/v1/traces", headers=auth_headers)
     assert resp.status_code == 200
     spans = resp.json()
     names = {s["name"] for s in spans}
@@ -55,6 +55,6 @@ async def test_traces_records_structured_answer_spans(app, client, auth_headers)
 
 @pytest.mark.asyncio
 async def test_traces_limit_param(client, auth_headers):
-    resp = await client.get("/traces?limit=1", headers=auth_headers)
+    resp = await client.get("/api/v1/traces?limit=1", headers=auth_headers)
     assert resp.status_code == 200
     assert len(resp.json()) <= 1

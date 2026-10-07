@@ -1,6 +1,6 @@
 # API Reference
 
-Base URL: wherever the FastAPI app is served — there's no global prefix; each router sets its own `prefix` in `app/main.py::create_app()`. Routers mount in this order: health, auth, schemas, structured, projects, chats, files, usage, search, traces, metrics, eval, arch.
+Base URL: wherever the FastAPI app is served, plus `/api/v1` for every router except health and metrics — those two stay unversioned, since infra probes and Prometheus scrape targets are conventionally outside API versioning. See `app/main.py::create_app()` for the exact `include_router(..., prefix=...)` calls. Routers mount in this order: health, metrics, auth, schemas, structured, projects, chats, files, usage, search, traces, eval, arch, admin.
 
 ## Error shape
 
@@ -34,24 +34,24 @@ Every error response — from an `AppError` subclass, a Pydantic validation fail
 
 ---
 
-## Auth (`/auth`)
+## Auth (`/api/v1/auth`)
 
 | Endpoint | Auth | Body | Response | Notes |
 |---|---|---|---|---|
-| `POST /auth/register` | none | `{email, password}` (password: 8–128 chars, ≥1 digit) | `201` `{id, email}` | `409 conflict`: disposable email domain or duplicate email; `422 invalid_email_domain`: malformed domain or likely typo (`suggestion` populated); `422 email_domain_unreachable`: domain has no mail-handling DNS record |
-| `POST /auth/check-email` | none | `{email}` | `200` `{valid, message, suggestion, warning}` | Runs the same email guardrail as `/auth/register` but never creates an account — for validate-on-blur in the registration form. `valid: false` means `/auth/register` would reject this address; a non-null `warning` with `valid: true` is a non-blocking MX fail-open notice. No rate limit of its own. |
-| `POST /auth/login` | none | `{email, password}` | `200` `{access_token, refresh_token, token_type}` | `401 unauthorized` on bad credentials/disabled account |
-| `POST /auth/refresh` | none (refresh token is the credential) | `{refresh_token}` | `200` same token shape | Revokes the presented token's `jti`, issues a fresh pair; `401` if expired/revoked/invalid |
-| `POST /auth/logout` | none (acts on the token) | `{refresh_token}` | `204` | Revokes the token's `jti` |
-| `GET /auth/me` | required | — | `200` `{id, email}` | |
+| `POST /api/v1/auth/register` | none | `{email, password}` (password: 8–128 chars, ≥1 digit) | `201` `{id, email, role}` (`role` is always `"user"` at registration) | `409 conflict`: disposable email domain or duplicate email; `422 invalid_email_domain`: malformed domain or likely typo (`suggestion` populated); `422 email_domain_unreachable`: domain has no mail-handling DNS record |
+| `POST /api/v1/auth/check-email` | none | `{email}` | `200` `{valid, message, suggestion, warning}` | Runs the same email guardrail as `/api/v1/auth/register` but never creates an account — for validate-on-blur in the registration form. `valid: false` means `/api/v1/auth/register` would reject this address; a non-null `warning` with `valid: true` is a non-blocking MX fail-open notice. No rate limit of its own. |
+| `POST /api/v1/auth/login` | none | `{email, password}` | `200` `{access_token, refresh_token, token_type}` | `401 unauthorized` on bad credentials/disabled account |
+| `POST /api/v1/auth/refresh` | none (refresh token is the credential) | `{refresh_token}` | `200` same token shape | Revokes the presented token's `jti`, issues a fresh pair; `401` if expired/revoked/invalid |
+| `POST /api/v1/auth/logout` | none (acts on the token) | `{refresh_token}` | `204` | Revokes the token's `jti` |
+| `GET /api/v1/auth/me` | required | — | `200` `{id, email, role}` | |
 
-`POST /auth/register` does **not** return tokens — call `/auth/login` separately to obtain them.
+`POST /api/v1/auth/register` does **not** return tokens — call `/api/v1/auth/login` separately to obtain them.
 
 ---
 
-## Schemas (`/schemas`)
+## Schemas (`/api/v1/schemas`)
 
-### `POST /schemas/validate`
+### `POST /api/v1/schemas/validate`
 Auth: required.
 
 Body — `SchemaDef`:
@@ -84,11 +84,11 @@ Dry-run compiles the field list into a real `pydantic.create_model(...)` class �
 
 ---
 
-## Structured Answers (`/structured`)
+## Structured Answers (`/api/v1/structured`)
 
 Both endpoints depend on `enforce_rate_limit` (20/min per user) and `enforce_daily_quota` (30/day per user) in addition to auth.
 
-### `POST /structured/answer`
+### `POST /api/v1/structured/answer`
 Body — `StructuredAnswerRequest`:
 ```json
 {
@@ -111,7 +111,7 @@ Redacts PII from the prompt, builds the schema into a system prompt, calls the g
 
 Errors: `400 guardrail_blocked` (injection match, checked before PII redaction), `429 rate_limited`, `502 generation_failed` (all providers failed or no attempt validated within the retry budget).
 
-### `POST /structured/answer/stream`
+### `POST /api/v1/structured/answer/stream`
 Same body. Response: `200`, `text/event-stream`. Each frame is `data: <json>\n\n`:
 ```
 data: {"stage": "generating", "attempt": 1}
@@ -126,45 +126,45 @@ data: {"stage": "done", "attempt": 1, "data": {"capital": "Paris", "population":
 
 ## Projects & Chats
 
-### Projects (`/projects`)
+### Projects (`/api/v1/projects`)
 
 | Endpoint | Body | Response |
 |---|---|---|
-| `POST /projects` | `{name}` (1–200 chars) | `201` `{id, name, created_at}` |
-| `GET /projects` | — | `200` `list[Project]`, newest first |
-| `GET /projects/{id}` | — | `200` `Project` / `404 not_found` |
-| `DELETE /projects/{id}` | — | `204` / `404 not_found` |
+| `POST /api/v1/projects` | `{name}` (1–200 chars) | `201` `{id, name, created_at}` |
+| `GET /api/v1/projects?limit=&offset=` | — | `200` `Page[Project]`, newest first (`limit` 1–100, default 20) |
+| `GET /api/v1/projects/{id}` | — | `200` `Project` / `404 not_found` |
+| `DELETE /api/v1/projects/{id}` | — | `204` / `404 not_found` |
 
-### Chats (`/chats`)
+### Chats (`/api/v1/chats`)
 
 | Endpoint | Body | Response |
 |---|---|---|
-| `POST /chats` | `{title, project_id?}` | `201` `{id, title, project_id, created_at, updated_at}`; `404` if `project_id` doesn't resolve |
-| `GET /chats?project_id=` | — | `200` `list[Chat]`, newest-updated first |
-| `GET /chats/{id}` | — | `200` chat + `messages: list[Message]` / `404` |
-| `DELETE /chats/{id}` | — | `204` / `404` |
-| `POST /chats/{id}/messages` | `{role: "user"\|"assistant", content, structured_data?, provider?, model?}` | `201` `Message`; just stores a message, doesn't call a model |
-| `GET /chats/{id}/messages` | — | `200` `list[Message]`, oldest first |
+| `POST /api/v1/chats` | `{title, project_id?}` | `201` `{id, title, project_id, created_at, updated_at}`; `404` if `project_id` doesn't resolve |
+| `GET /api/v1/chats?project_id=&limit=&offset=` | — | `200` `Page[Chat]`, newest-updated first |
+| `GET /api/v1/chats/{id}` | — | `200` chat + full `messages: list[Message]` (not paginated - the detail view always returns the whole conversation) / `404` |
+| `DELETE /api/v1/chats/{id}` | — | `204` / `404` |
+| `POST /api/v1/chats/{id}/messages` | `{role: "user"\|"assistant", content, structured_data?, provider?, model?}` | `201` `Message`; just stores a message, doesn't call a model |
+| `GET /api/v1/chats/{id}/messages?limit=&offset=` | — | `200` `Page[Message]`, oldest first |
 
 ---
 
 ## Files
 
-### Files (`/files`)
+### Files (`/api/v1/files`)
 
 | Endpoint | Request | Response |
 |---|---|---|
-| `POST /files` | multipart `file` + query `chat_id?` | `201` `{id, filename, content_type, size_bytes, chat_id, created_at}`; `413 payload_too_large` over `max_upload_size_bytes` (default 10 MiB) |
-| `GET /files?chat_id=` | — | `200` `list[File]`, newest first |
-| `GET /files/{id}` | — | `200` metadata / `404` |
-| `DELETE /files/{id}` | — | `204` / `404` |
-| `GET /files/{id}/content` | — | `200` raw bytes, `Content-Type` = stored type / `404` |
+| `POST /api/v1/files` | multipart `file` + query `chat_id?` | `201` `{id, filename, content_type, size_bytes, chat_id, created_at}`; `413 payload_too_large` over `max_upload_size_bytes` (default 10 MiB); `415 unsupported_media_type` if `content_type` isn't on the allowlist |
+| `GET /api/v1/files?chat_id=&limit=&offset=` | — | `200` `Page[File]`, newest first |
+| `GET /api/v1/files/{id}` | — | `200` metadata / `404` |
+| `DELETE /api/v1/files/{id}` | — | `204` / `404` |
+| `GET /api/v1/files/{id}/content` | — | `200` raw bytes, `Content-Type` = stored type / `404` |
 
 ---
 
-## Search (`/search`)
+## Search (`/api/v1/search`)
 
-### `GET /search?q=<term>`
+### `GET /api/v1/search?q=<term>`
 Auth: required. `q` required, min length 1.
 
 Response `200`:
@@ -175,12 +175,12 @@ Case-insensitive substring search over the current user's own chat titles and me
 
 ---
 
-## Usage (`/usage`)
+## Usage (`/api/v1/usage`)
 
-### `GET /usage`
+### `GET /api/v1/usage`
 Auth: required.
 
-Response `200`: `{user_count_today, user_limit}`. Reports today's count against the daily quota enforced on `/structured/answer(+stream)`.
+Response `200`: `{user_count_today, user_limit}`. Reports today's count against the daily quota enforced on `/api/v1/structured/answer(+stream)`.
 
 ---
 
@@ -191,31 +191,44 @@ Response `200`: `{user_count_today, user_limit}`. Reports today's count against 
 | `GET /health` | none | `200` `{status: "ok"}` — liveness |
 | `GET /ready` | none | `200` `{ready, db}` — readiness; a DB failure shows as `false`, not an HTTP error |
 | `GET /metrics` | none | `200` Prometheus text exposition format (not JSON) — see [OBSERVABILITY.md](OBSERVABILITY.md#2-metrics) for the metric list |
-| `GET /traces?limit=` | required | `200` `list[Span]`, most recent first, `limit` 1–500 (default 50) — see [OBSERVABILITY.md](OBSERVABILITY.md#1-tracing) |
+| `GET /api/v1/traces?limit=` | required | `200` `list[Span]`, most recent first, `limit` 1–500 (default 50) — see [OBSERVABILITY.md](OBSERVABILITY.md#1-tracing) |
 
 ---
 
-## Architecture (`/arch`)
+## Architecture (`/api/v1/arch`)
 
 Backs the frontend's Architecture tab.
 
 | Endpoint | Body | Response |
 |---|---|---|
-| `GET /arch/graph` | — | `200` static `{nodes, edges, groups, scenarios}` describing the system (15 nodes / 18 edges / 8 groups / 9 scenarios) — hand-authored, not introspected |
-| `GET /arch/status` | — | `200` `{ollama: {available, latency_ms, models, ...}, groq: {...}, mcp: {...}, checked_at, nodes}` — live reachability probe of Ollama (`/api/tags`), Groq (`/openai/v1/models`), and the in-process MCP server (`list_tools`/`list_resources`) |
-| `POST /arch/test-run` | `{scenario_id}` (one of 9 fixed literals, e.g. `happy_path_fast`, `ollama_down_groq_fallback`, `prompt_injection_blocked`, `mcp_tool_call`) | `200` `{scenario_id, label, passed, summary, steps: [...], total_duration_ms}` — replays a scripted scenario against the real service/guardrail code with fake in-memory providers (no real network calls) |
+| `GET /api/v1/arch/graph` | — | `200` static `{nodes, edges, groups, scenarios}` describing the system (15 nodes / 18 edges / 8 groups / 9 scenarios) — hand-authored, not introspected |
+| `GET /api/v1/arch/status` | — | `200` `{ollama: {available, latency_ms, models, ...}, groq: {...}, mcp: {...}, checked_at, nodes}` — live reachability probe of Ollama (`/api/tags`), Groq (`/openai/v1/models`), and the in-process MCP server (`list_tools`/`list_resources`) |
+| `POST /api/v1/arch/test-run` | `{scenario_id}` (one of 9 fixed literals, e.g. `happy_path_fast`, `ollama_down_groq_fallback`, `prompt_injection_blocked`, `mcp_tool_call`) | `200` `{scenario_id, label, passed, summary, steps: [...], total_duration_ms}` — replays a scripted scenario against the real service/guardrail code with fake in-memory providers (no real network calls) |
 
 ---
 
-## Evaluation (`/eval`)
+## Evaluation (`/api/v1/eval`)
 
 | Endpoint | Body | Response |
 |---|---|---|
-| `GET /eval/cases` | — | `200` `list[GoldenCase]` loaded from `eval/cases/golden.json` |
-| `POST /eval/run` | `{case_ids?, provider: "gateway"\|"ollama"\|"groq", concurrency: 1-20}` | `200` `EvalReport`: `{started_at, finished_at, total, passed, failed, pass_rate, avg_latency_ms, p95_latency_ms, avg_attempts, by_category, results: [...]}`; `404 not_found` if any `case_ids` don't exist |
-| `POST /eval/run/stream` | same body | `200` `text/event-stream`: a `{"stage": "case_done", "result": {...}}` frame per finished case (out of order — `asyncio.as_completed`), then one final `{"stage": "done", "report": {...}}` |
+| `GET /api/v1/eval/cases` | — | `200` `list[GoldenCase]` loaded from `eval/cases/golden.json` |
+| `POST /api/v1/eval/run` | `{case_ids?, provider: "gateway"\|"ollama"\|"groq", concurrency: 1-20}` | `200` `EvalReport`: `{started_at, finished_at, total, passed, failed, pass_rate, avg_latency_ms, p95_latency_ms, avg_attempts, by_category, results: [...]}`; `404 not_found` if any `case_ids` don't exist |
+| `POST /api/v1/eval/run/stream` | same body | `200` `text/event-stream`: a `{"stage": "case_done", "result": {...}}` frame per finished case (out of order — `asyncio.as_completed`), then one final `{"stage": "done", "report": {...}}` |
+| `GET /api/v1/eval/runs?limit=&offset=` | — | `200` `Page[EvalRunSummary]`, newest first |
 
 `by_category` entries are `{total, passed}` only — per-category `pass_rate` isn't a serialized field, only the top-level `EvalReport.pass_rate` is.
+
+---
+
+## Admin (`/api/v1/admin`)
+
+Every endpoint here requires `require_admin` (`app/core/deps.py`) in addition to auth: a valid token for a user whose `role` is `"admin"`, or `403 forbidden`. There's no API path to create the *first* admin — see `scripts/promote_admin.py`, which flips a user's role directly in the database.
+
+| Endpoint | Body | Response |
+|---|---|---|
+| `GET /api/v1/admin/users?limit=&offset=` | — | `200` `Page[AdminUser]`: `{items: [{id, email, role, is_active, created_at}], total, limit, offset}` |
+| `PATCH /api/v1/admin/users/{user_id}/role` | `{role: "user"\|"admin"}` | `200` updated `AdminUser` / `404 not_found` / `409 conflict` if the admin targets their own id (self-demotion is blocked) |
+| `GET /api/v1/admin/usage?limit=&offset=` | — | `200` `Page[{user_id, email, count_today}]` — today's per-user request count across every account, newest/highest first |
 
 ---
 
@@ -223,11 +236,12 @@ Backs the frontend's Architecture tab.
 
 | Guard | Dependency | Applies to |
 |---|---|---|
-| JWT auth | `get_current_user` | everything except `/auth/register`, `/auth/check-email`, `/auth/login`, `/auth/refresh`, `/auth/logout`, `/health`, `/ready`, `/metrics` |
-| Per-minute rate limit | `enforce_rate_limit` | `POST /structured/answer(+stream)` |
+| JWT auth | `get_current_user` | everything except `/api/v1/auth/register`, `/api/v1/auth/check-email`, `/api/v1/auth/login`, `/api/v1/auth/refresh`, `/api/v1/auth/logout`, `/health`, `/ready`, `/metrics` |
+| Admin role | `require_admin` | `/api/v1/admin/*` |
+| Per-minute rate limit | `enforce_rate_limit` | `POST /api/v1/structured/answer(+stream)` |
 | Daily quota | `enforce_daily_quota` | same endpoints |
-| Prompt-injection screen | `detect_prompt_injection` (via shared `guard_prompt()`) | `POST /structured/answer(+stream)` |
-| PII redaction | `redact_pii` (via shared `guard_prompt()`) | `POST /structured/answer(+stream)` — see [GUARDRAILS.md](GUARDRAILS.md#2-pii-redaction) |
-| Email guardrail | `check_email` | `POST /auth/register`, `POST /auth/check-email` — see [GUARDRAILS.md](GUARDRAILS.md#5-email-guardrail) |
+| Prompt-injection screen | `detect_prompt_injection` (via shared `guard_prompt()`) | `POST /api/v1/structured/answer(+stream)` |
+| PII redaction | `redact_pii` (via shared `guard_prompt()`) | `POST /api/v1/structured/answer(+stream)` — see [GUARDRAILS.md](GUARDRAILS.md#2-pii-redaction) |
+| Email guardrail | `check_email` | `POST /api/v1/auth/register`, `POST /api/v1/auth/check-email` — see [GUARDRAILS.md](GUARDRAILS.md#5-email-guardrail) |
 
-See [GUARDRAILS.md](GUARDRAILS.md) for how each guard works internally, and [OBSERVABILITY.md](OBSERVABILITY.md) for `/metrics` and `/traces` detail.
+See [GUARDRAILS.md](GUARDRAILS.md) for how each guard works internally, and [OBSERVABILITY.md](OBSERVABILITY.md) for `/metrics` and `/api/v1/traces` detail.

@@ -44,14 +44,14 @@ export async function seedAuthedSession(page: Page): Promise<SeededSession> {
   const email = `e2e-${randomUUID()}@example.com`
   const password = 'password1'
 
-  const registerResp = await page.request.post('/auth/register', {
+  const registerResp = await page.request.post('/api/v1/auth/register', {
     data: { email, password },
   })
   if (!registerResp.ok()) {
     throw new Error(`register failed: ${registerResp.status()} ${await registerResp.text()}`)
   }
 
-  const loginResp = await page.request.post('/auth/login', {
+  const loginResp = await page.request.post('/api/v1/auth/login', {
     data: { email, password },
   })
   if (!loginResp.ok()) {

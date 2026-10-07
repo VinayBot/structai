@@ -152,7 +152,7 @@ function substitutePathParams(path: string, values: Record<string, string>): str
 
 function needsConfirmation(endpoint: ArchEndpoint): boolean {
   if (endpoint.method.toUpperCase() === 'DELETE') return true
-  return endpoint.path === '/structured/answer'
+  return endpoint.path === '/api/v1/structured/answer'
 }
 
 function buildCurlSnippet(endpoint: ArchEndpoint, body: unknown, origin: string): string {

@@ -4,12 +4,12 @@ from app.services import arch_service
 
 
 async def test_graph_requires_auth(client: AsyncClient):
-    resp = await client.get("/arch/graph")
+    resp = await client.get("/api/v1/arch/graph")
     assert resp.status_code == 401
 
 
 async def test_graph_shape(client: AsyncClient, auth_headers: dict[str, str]):
-    resp = await client.get("/arch/graph", headers=auth_headers)
+    resp = await client.get("/api/v1/arch/graph", headers=auth_headers)
     assert resp.status_code == 200
     body = resp.json()
 
@@ -48,7 +48,7 @@ async def test_graph_marks_extras_consistently(client: AsyncClient, auth_headers
     """Multi-Cloud/File-storage are real, working code - just scoped out of the
     default (non-extras) view, per the project's own README/USAGE_GUIDE framing of
     "assignment scope" vs. extra capabilities. Not deleted, just flagged."""
-    resp = await client.get("/arch/graph", headers=auth_headers)
+    resp = await client.get("/api/v1/arch/graph", headers=auth_headers)
     body = resp.json()
 
     extra_node_ids = {n["id"] for n in body["nodes"] if n["is_extra"]}
@@ -71,7 +71,7 @@ async def test_graph_marks_extras_consistently(client: AsyncClient, auth_headers
 async def test_status_reports_unreachable_providers(
     client: AsyncClient, auth_headers: dict[str, str]
 ):
-    resp = await client.get("/arch/status", headers=auth_headers)
+    resp = await client.get("/api/v1/arch/status", headers=auth_headers)
     assert resp.status_code == 200
     body = resp.json()
     assert body["ollama"]["name"] == "ollama"
@@ -83,14 +83,14 @@ async def test_status_reports_unreachable_providers(
 
 async def test_test_run_rejects_unknown_scenario(client: AsyncClient, auth_headers: dict[str, str]):
     resp = await client.post(
-        "/arch/test-run", headers=auth_headers, json={"scenario_id": "not_a_real_scenario"}
+        "/api/v1/arch/test-run", headers=auth_headers, json={"scenario_id": "not_a_real_scenario"}
     )
     assert resp.status_code == 422
 
 
 async def test_test_run_happy_path_fast(client: AsyncClient, auth_headers: dict[str, str]):
     resp = await client.post(
-        "/arch/test-run", headers=auth_headers, json={"scenario_id": "happy_path_fast"}
+        "/api/v1/arch/test-run", headers=auth_headers, json={"scenario_id": "happy_path_fast"}
     )
     assert resp.status_code == 200
     body = resp.json()
@@ -102,10 +102,10 @@ async def test_test_run_happy_path_fast(client: AsyncClient, auth_headers: dict[
 async def test_test_run_all_scenarios_execute_and_report_pass(
     client: AsyncClient, auth_headers: dict[str, str]
 ):
-    graph = (await client.get("/arch/graph", headers=auth_headers)).json()
+    graph = (await client.get("/api/v1/arch/graph", headers=auth_headers)).json()
     for scenario in graph["scenarios"]:
         resp = await client.post(
-            "/arch/test-run", headers=auth_headers, json={"scenario_id": scenario["id"]}
+            "/api/v1/arch/test-run", headers=auth_headers, json={"scenario_id": scenario["id"]}
         )
         assert resp.status_code == 200, scenario["id"]
         body = resp.json()
