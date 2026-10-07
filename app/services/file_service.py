@@ -4,7 +4,7 @@ from pathlib import Path
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.errors import NotFoundError, PayloadTooLargeError
+from app.core.errors import NotFoundError, PayloadTooLargeError, UnsupportedMediaTypeError
 from app.models.file import FileAttachment
 
 
@@ -18,7 +18,11 @@ async def save_file(
     content: bytes,
     upload_dir: str,
     max_size_bytes: int,
+    allowed_content_types: set[str],
 ) -> FileAttachment:
+    if content_type not in allowed_content_types:
+        raise UnsupportedMediaTypeError(f"content type '{content_type}' is not accepted")
+
     if len(content) > max_size_bytes:
         raise PayloadTooLargeError(f"file exceeds the {max_size_bytes}-byte upload limit")
 

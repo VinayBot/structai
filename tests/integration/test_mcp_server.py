@@ -169,6 +169,7 @@ async def test_list_and_get_files(mcp_tokens):
             content=b"\x89PNG-fake-bytes",
             upload_dir=settings.upload_dir,
             max_size_bytes=settings.max_upload_size_bytes,
+            allowed_content_types=settings.allowed_upload_content_type_set,
         )
 
     files = await _call("list_files")

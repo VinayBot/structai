@@ -31,6 +31,7 @@ async def upload_file(
         content=content,
         upload_dir=settings.upload_dir,
         max_size_bytes=settings.max_upload_size_bytes,
+        allowed_content_types=settings.allowed_upload_content_type_set,
     )
     return FileResponse.model_validate(attachment, from_attributes=True)
 

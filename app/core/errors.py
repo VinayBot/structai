@@ -94,6 +94,11 @@ class PayloadTooLargeError(AppError):
     status_code = status.HTTP_413_CONTENT_TOO_LARGE
 
 
+class UnsupportedMediaTypeError(AppError):
+    code = "unsupported_media_type"
+    status_code = status.HTTP_415_UNSUPPORTED_MEDIA_TYPE
+
+
 def _error_body(
     code: str,
     message: str,

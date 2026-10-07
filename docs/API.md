@@ -23,6 +23,8 @@ Every error response — from an `AppError` subclass, a Pydantic validation fail
 | `guardrail_blocked` | 400 | `GuardrailError` | Prompt matched the injection screen |
 | `rate_limited` | 429 | `RateLimitError` | Per-minute rate limit or daily quota (user) exceeded |
 | `payload_too_large` | 413 | `PayloadTooLargeError` | Upload/generated file exceeds `max_upload_size_bytes` |
+| `unsupported_media_type` | 415 | `UnsupportedMediaTypeError` | Upload `content_type` isn't on `allowed_upload_content_types` |
+| `forbidden` | 403 | `ForbiddenError` | Authenticated, but `require_admin` rejected a non-admin caller |
 | `invalid_schema` | 400 | explicit in `routes/schemas.py` | User-supplied `SchemaDef` can't compile into a model |
 | `invalid_email_domain` | 422 | `InvalidEmailDomainError` | Email guardrail: malformed domain, or a likely typo of a popular provider (`suggestion` populated for typos) |
 | `email_domain_unreachable` | 422 | `EmailDomainUnreachableError` | Email guardrail: domain has no MX/A/AAAA record (confirmed can't receive mail) |

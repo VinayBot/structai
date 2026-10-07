@@ -42,6 +42,10 @@ class Settings(BaseSettings):
     # Persistence / uploads
     upload_dir: str = "./data/uploads"
     max_upload_size_bytes: int = 10 * 1024 * 1024
+    allowed_upload_content_types: str = (
+        "text/plain,text/csv,text/markdown,application/json,application/pdf,"
+        "image/png,image/jpeg,image/gif,image/webp"
+    )
 
     # Observability
     otel_exporter_otlp_endpoint: str = ""
@@ -62,6 +66,10 @@ class Settings(BaseSettings):
     @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+
+    @property
+    def allowed_upload_content_type_set(self) -> set[str]:
+        return {t.strip() for t in self.allowed_upload_content_types.split(",") if t.strip()}
 
 
 @lru_cache

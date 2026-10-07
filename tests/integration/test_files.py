@@ -44,6 +44,14 @@ async def test_oversize_upload_rejected(client, auth_headers, monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_disallowed_content_type_rejected(client, auth_headers):
+    files = {"file": ("script.sh", b"#!/bin/sh\necho hi", "application/x-sh")}
+    resp = await client.post("/api/v1/files", files=files, headers=auth_headers)
+    assert resp.status_code == 415
+    assert resp.json()["error"]["code"] == "unsupported_media_type"
+
+
+@pytest.mark.asyncio
 async def test_delete_file(client, auth_headers):
     files = {"file": ("gone.txt", b"bye", "text/plain")}
     upload = await client.post("/api/v1/files", files=files, headers=auth_headers)
