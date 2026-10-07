@@ -23,7 +23,7 @@ Every error response — from an `AppError` subclass, a Pydantic validation fail
 | `guardrail_blocked` | 400 | `GuardrailError` | Prompt matched the injection screen |
 | `rate_limited` | 429 | `RateLimitError` | Per-minute rate limit or daily quota (user) exceeded |
 | `payload_too_large` | 413 | `PayloadTooLargeError` | Upload/generated file exceeds `max_upload_size_bytes` |
-| `unsupported_media_type` | 415 | `UnsupportedMediaTypeError` | Upload `content_type` isn't on `allowed_upload_content_types` |
+| `unsupported_media_type` | 415 | `UnsupportedMediaTypeError` | Upload `content_type` isn't on `allowed_upload_content_types`, or its bytes don't match that claimed type |
 | `forbidden` | 403 | `ForbiddenError` | Authenticated, but `require_admin` rejected a non-admin caller |
 | `oauth_failed` | 502 | `OAuthError` | GitHub rejected the authorization code, or its API failed unexpectedly |
 | `service_unavailable` | 503 | `ServiceUnavailableError` | GitHub login hit while `GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET` are unset |
@@ -164,7 +164,7 @@ data: {"stage": "done", "attempt": 1, "data": {"capital": "Paris", "population":
 
 | Endpoint | Request | Response |
 |---|---|---|
-| `POST /api/v1/files` | multipart `file` + query `chat_id?` | `201` `{id, filename, content_type, size_bytes, chat_id, created_at}`; `413 payload_too_large` over `max_upload_size_bytes` (default 10 MiB); `415 unsupported_media_type` if `content_type` isn't on the allowlist |
+| `POST /api/v1/files` | multipart `file` + query `chat_id?` | `201` `{id, filename, content_type, size_bytes, chat_id, created_at}`; `413 payload_too_large` over `max_upload_size_bytes` (default 10 MiB); `415 unsupported_media_type` if `content_type` isn't on the allowlist, or if the bytes don't actually look like it (magic-byte signature check for images/PDF, UTF-8/JSON-parse check for the text types) — the client-supplied header alone is never trusted |
 | `GET /api/v1/files?chat_id=&limit=&offset=` | — | `200` `Page[File]`, newest first |
 | `GET /api/v1/files/{id}` | — | `200` metadata / `404` |
 | `DELETE /api/v1/files/{id}` | — | `204` / `404` |

@@ -52,6 +52,45 @@ async def test_disallowed_content_type_rejected(client, auth_headers):
 
 
 @pytest.mark.asyncio
+async def test_upload_rejects_spoofed_image_content_type(client, auth_headers):
+    """The Content-Type header is client-supplied and trivially spoofable - a
+    renamed shell script claiming to be a PNG must still be rejected."""
+    files = {"file": ("totally-a-photo.png", b"#!/bin/sh\necho hi", "image/png")}
+    resp = await client.post("/api/v1/files", files=files, headers=auth_headers)
+    assert resp.status_code == 415
+    assert resp.json()["error"]["code"] == "unsupported_media_type"
+
+
+@pytest.mark.asyncio
+async def test_upload_rejects_malformed_json_claiming_json_type(client, auth_headers):
+    files = {"file": ("data.json", b"{not valid json", "application/json")}
+    resp = await client.post("/api/v1/files", files=files, headers=auth_headers)
+    assert resp.status_code == 415
+
+
+@pytest.mark.asyncio
+async def test_upload_rejects_invalid_utf8_claiming_text_type(client, auth_headers):
+    files = {"file": ("note.txt", b"\xff\xfe\x00\x01not-utf8", "text/plain")}
+    resp = await client.post("/api/v1/files", files=files, headers=auth_headers)
+    assert resp.status_code == 415
+
+
+@pytest.mark.asyncio
+async def test_upload_accepts_content_with_a_real_png_signature(client, auth_headers):
+    png_bytes = b"\x89PNG\r\n\x1a\n" + b"not-a-real-image-but-the-signature-is-real"
+    files = {"file": ("photo.png", png_bytes, "image/png")}
+    resp = await client.post("/api/v1/files", files=files, headers=auth_headers)
+    assert resp.status_code == 201
+
+
+@pytest.mark.asyncio
+async def test_upload_accepts_valid_json_content(client, auth_headers):
+    files = {"file": ("data.json", b'{"ok": true}', "application/json")}
+    resp = await client.post("/api/v1/files", files=files, headers=auth_headers)
+    assert resp.status_code == 201
+
+
+@pytest.mark.asyncio
 async def test_delete_file(client, auth_headers):
     files = {"file": ("gone.txt", b"bye", "text/plain")}
     upload = await client.post("/api/v1/files", files=files, headers=auth_headers)

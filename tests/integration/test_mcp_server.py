@@ -166,7 +166,7 @@ async def test_list_and_get_files(mcp_tokens):
             chat_id=None,
             filename="sunset.png",
             content_type="image/png",
-            content=b"\x89PNG-fake-bytes",
+            content=b"\x89PNG\r\n\x1a\n-fake-but-signature-correct-bytes",
             upload_dir=settings.upload_dir,
             max_size_bytes=settings.max_upload_size_bytes,
             allowed_content_types=settings.allowed_upload_content_type_set,
