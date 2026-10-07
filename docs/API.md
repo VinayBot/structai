@@ -53,6 +53,8 @@ Every error response — from an `AppError` subclass, a Pydantic validation fail
 
 `POST /api/v1/auth/register` does **not** return tokens — call `/api/v1/auth/login` separately to obtain them.
 
+`register`, `login`, `refresh`, and `github/callback` share one `429 rate_limited` budget (`AUTH_RATE_LIMIT_PER_MIN`, default 10/min) keyed by caller IP — brute-forcing a password or hammering the token endpoints from one source gets throttled regardless of which of the four it's spread across. `check-email` and `github/login` take no credential, so neither is covered.
+
 **Setting up GitHub login:** register an OAuth App at [github.com/settings/developers](https://github.com/settings/developers) with callback URL `http://localhost:5173/auth/github/callback` (or your deployed frontend origin + `/auth/github/callback`), then set `GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET`/`GITHUB_OAUTH_REDIRECT_URI` in `.env`. The login button degrades to a clear `503` error, not a crash, while unconfigured.
 
 ---
@@ -247,6 +249,7 @@ Every endpoint here requires `require_admin` (`app/core/deps.py`) in addition to
 | JWT auth | `get_current_user` | everything except `/api/v1/auth/register`, `/api/v1/auth/check-email`, `/api/v1/auth/login`, `/api/v1/auth/refresh`, `/api/v1/auth/logout`, `/api/v1/auth/github/login`, `/api/v1/auth/github/callback`, `/health`, `/ready`, `/metrics` |
 | Admin role | `require_admin` | `/api/v1/admin/*` |
 | Per-minute rate limit | `enforce_rate_limit` | `POST /api/v1/structured/answer(+stream)` |
+| Per-IP auth rate limit | `enforce_auth_rate_limit` | `POST /api/v1/auth/register`, `/login`, `/refresh`, `/github/callback` — one shared budget across all four, since it's keyed by IP, not endpoint |
 | Daily quota | `enforce_daily_quota` | same endpoints |
 | Prompt-injection screen | `detect_prompt_injection` (via shared `guard_prompt()`) | `POST /api/v1/structured/answer(+stream)` |
 | PII redaction | `redact_pii` (via shared `guard_prompt()`) | `POST /api/v1/structured/answer(+stream)` — see [GUARDRAILS.md](GUARDRAILS.md#2-pii-redaction) |

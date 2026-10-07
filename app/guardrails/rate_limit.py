@@ -41,5 +41,14 @@ def get_rate_limiter() -> RateLimiter:
     return RateLimiter(get_settings().rate_limit_per_min)
 
 
+@lru_cache
+def get_auth_rate_limiter() -> RateLimiter:
+    """Separate instance (own limit, own hit-tracking) from get_rate_limiter() -
+    a burst of login attempts shouldn't spend the same budget as structured-answer
+    calls, and vice versa."""
+    return RateLimiter(get_settings().auth_rate_limit_per_min)
+
+
 def reset_rate_limiter_cache() -> None:
     get_rate_limiter.cache_clear()
+    get_auth_rate_limiter.cache_clear()

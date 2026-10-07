@@ -42,6 +42,10 @@ class Settings(BaseSettings):
     # Guardrails / abuse limits
     rate_limit_per_min: int = 20
     daily_quota_user: int = 30
+    # Per-IP, applied to register/login/refresh/github-callback - these take a
+    # credential (password or OAuth code) before a user is authenticated, so the
+    # per-user limiter above doesn't cover them. Deliberately stricter.
+    auth_rate_limit_per_min: int = 10
     pii_mode: Literal["redact", "block"] = "redact"
     email_check_mx: bool = True
     email_check_mx_timeout_seconds: float = 3.0

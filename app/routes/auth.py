@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.deps import get_current_user
+from app.core.deps import enforce_auth_rate_limit, get_current_user
 from app.db import get_session
 from app.models.user import User
 from app.schemas.auth import (
@@ -21,7 +21,12 @@ from app.services import auth_service
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
-@router.post("/register", response_model=UserResponse, status_code=201)
+@router.post(
+    "/register",
+    response_model=UserResponse,
+    status_code=201,
+    dependencies=[Depends(enforce_auth_rate_limit)],
+)
 async def register(
     body: RegisterRequest,
     session: AsyncSession = Depends(get_session),
@@ -37,12 +42,16 @@ async def check_email_route(body: EmailCheckRequest) -> EmailCheckResponse:
     return await auth_service.check_email_address(body.email)
 
 
-@router.post("/login", response_model=TokenResponse)
+@router.post(
+    "/login", response_model=TokenResponse, dependencies=[Depends(enforce_auth_rate_limit)]
+)
 async def login(body: LoginRequest, session: AsyncSession = Depends(get_session)) -> TokenResponse:
     return await auth_service.authenticate_user(session, body.email, body.password)
 
 
-@router.post("/refresh", response_model=TokenResponse)
+@router.post(
+    "/refresh", response_model=TokenResponse, dependencies=[Depends(enforce_auth_rate_limit)]
+)
 async def refresh(
     body: RefreshRequest, session: AsyncSession = Depends(get_session)
 ) -> TokenResponse:
@@ -69,7 +78,11 @@ async def github_login(
     return GithubAuthorizeResponse(authorize_url=auth_service.build_github_authorize_url(state))
 
 
-@router.post("/github/callback", response_model=TokenResponse)
+@router.post(
+    "/github/callback",
+    response_model=TokenResponse,
+    dependencies=[Depends(enforce_auth_rate_limit)],
+)
 async def github_callback(
     body: GithubCallbackRequest, session: AsyncSession = Depends(get_session)
 ) -> TokenResponse:
