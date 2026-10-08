@@ -1466,11 +1466,11 @@ async def run_scenario(scenario_id: ScenarioId) -> TestRunResponse:
         )
         steps.append(_step("jwt_auth", "e_jwt_auth_rate_limiter", "JWT verified", "ok", "", t))
         limiter = RateLimiter(limit_per_minute=1)
-        limiter.check("demo-user")
+        await limiter.check("demo-user")
         steps.append(_step("rate_limiter", None, "request 1 admitted", "ok", "1/1 used", t))
         request_payload = {"user": "demo-user", "limit_per_minute": 1}
         try:
-            limiter.check("demo-user")
+            await limiter.check("demo-user")
             steps.append(
                 _step(
                     "rate_limiter",

@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 from functools import lru_cache
 
 from app.core.logging import request_id_ctx
+from app.core.otel import export_span
 
 _current_span_id: ContextVar[str | None] = ContextVar("current_span_id", default=None)
 
@@ -59,6 +60,7 @@ class Tracer:
             span.end_time = self._clock()
             span.duration_ms = (span.end_time - span.start_time) * 1000
             self._spans.append(span)
+            export_span(span)
 
     def recent(self, limit: int = 100) -> list[Span]:
         spans = list(self._spans)[-limit:]

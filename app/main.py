@@ -10,6 +10,7 @@ from app.core.errors import register_exception_handlers
 from app.core.http_client import aclose_http_client, get_http_client
 from app.core.logging import configure_logging
 from app.core.middleware import metrics_middleware, request_id_middleware
+from app.core.otel import init_otel
 from app.db import get_session_maker
 from app.routes.admin import router as admin_router
 from app.routes.arch import router as arch_router
@@ -36,6 +37,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     # serving traffic, rather than paying its setup cost on whichever request happens
     # to need a provider first.
     get_http_client()
+    init_otel(get_settings())
     try:
         imported = await import_existing_reports(get_session_maker())
         if imported:

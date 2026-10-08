@@ -273,7 +273,10 @@ async def test_negative_control_prompt_injection_detects_a_disabled_guard(monkey
 
 
 async def test_negative_control_rate_limit_detects_a_disabled_limiter(monkeypatch):
-    monkeypatch.setattr(arch_service.RateLimiter, "check", lambda self, key: None)
+    async def _disabled_check(self, key):
+        return None
+
+    monkeypatch.setattr(arch_service.RateLimiter, "check", _disabled_check)
     result = await arch_service.run_scenario("rate_limit_exceeded")
     assert result.passed is False
     assert any(not a.passed for a in result.assertions)

@@ -26,6 +26,15 @@ dependencies = [
 [project.scripts]
 structai-mcp = "app.mcp.server:main"
 
+[project.optional-dependencies]
+redis = [
+    "redis>=5.0",
+]
+otel = [
+    "opentelemetry-exporter-otlp-proto-http>=1.27",
+    "opentelemetry-sdk>=1.27",
+]
+
 [dependency-groups]
 dev = [
     "pytest>=8.0",
@@ -34,6 +43,8 @@ dev = [
     "ruff>=0.6",
     "mypy>=1.11",
     "pre-commit>=3.8",
+    "fakeredis>=2.21",
+    "lupa>=2.8",
 ]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

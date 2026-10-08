@@ -20,6 +20,7 @@ from app.config import get_settings  # noqa: E402
 from app.core.build_info import reset_build_info_cache  # noqa: E402
 from app.core.http_client import reset_http_client_cache  # noqa: E402
 from app.core.metrics_buffer import reset_request_buffer_cache  # noqa: E402
+from app.core.otel import reset_otel  # noqa: E402
 from app.core.tracing import reset_tracer_cache  # noqa: E402
 from app.db import Base, get_engine, get_session_maker, reset_db_caches  # noqa: E402
 from app.gateway.factory import reset_gateway_cache  # noqa: E402
@@ -33,6 +34,7 @@ reset_tracer_cache()
 reset_build_info_cache()
 reset_request_buffer_cache()
 reset_http_client_cache()
+reset_otel()
 
 
 @pytest_asyncio.fixture
@@ -68,6 +70,7 @@ def _reset_caches():
     reset_build_info_cache()
     reset_request_buffer_cache()
     reset_http_client_cache()
+    reset_otel()
     yield
 
 

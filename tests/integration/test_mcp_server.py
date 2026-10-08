@@ -8,6 +8,7 @@ app/services/* alone would miss.
 
 import io
 import json
+import os
 from datetime import timedelta
 
 import pytest
@@ -19,6 +20,7 @@ from app.config import get_settings
 from app.core.security import _create_token, create_refresh_token
 from app.db import get_session_maker
 from app.gateway.router import ModelGateway, ProviderCandidate
+from app.guardrails.rate_limit import reset_rate_limiter_cache
 from app.mcp import server as mcp_server
 from app.mcp.auth import McpSession
 from app.models.user import User
@@ -130,6 +132,38 @@ async def test_ask_structured_success(mcp_tokens, monkeypatch):
     assert result["data"] == {"title": "hello"}
     assert result["provider"] == "fake"
     assert result["attempts"] == 1
+
+
+async def test_ask_structured_respects_the_rate_limit(mcp_tokens, monkeypatch):
+    """_guard_model_call awaits get_rate_limiter().check(...) directly - a separate
+    code path from the HTTP routes' enforce_rate_limit dependency - so nothing else
+    in this file would catch a regression here (e.g. a dropped await, which mypy
+    catches statically but a test exercising the real behavior catches too)."""
+    os.environ["RATE_LIMIT_PER_MIN"] = "1"
+    get_settings.cache_clear()
+    reset_rate_limiter_cache()
+
+    fake = FakeProvider(responses=['{"title": "hello"}'])
+    monkeypatch.setattr(
+        mcp_server,
+        "get_gateway",
+        lambda: ModelGateway({"fast": [ProviderCandidate(fake, "fake-model")]}),
+    )
+
+    try:
+        first = await _call(
+            "ask_structured",
+            {"prompt": "say hello", "fields": [{"name": "title", "type": "string"}]},
+        )
+        assert first["data"] == {"title": "hello"}
+
+        with pytest.raises(ToolError):
+            await _call(
+                "ask_structured",
+                {"prompt": "say hello again", "fields": [{"name": "title", "type": "string"}]},
+            )
+    finally:
+        del os.environ["RATE_LIMIT_PER_MIN"]
 
 
 async def test_ask_structured_blocks_prompt_injection(mcp_tokens):

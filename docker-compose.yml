@@ -11,3 +11,32 @@ services:
       - "host.docker.internal:host-gateway"
     volumes:
       - ./data:/app/data
+
+  # Optional - not started by a bare `docker-compose up`. Enable with
+  # `docker-compose --profile redis up`, and in .env set RATE_LIMIT_BACKEND=redis
+  # and REDIS_URL=redis://redis:6379/0 (the service name is the hostname on the
+  # compose network).
+  redis:
+    image: redis:7-alpine
+    profiles: ["redis"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+
+  # Optional - not started by a bare `docker-compose up`. Enable with
+  # `docker-compose --profile otel up`, and in .env set
+  # OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318. Receives spans over
+  # OTLP/HTTP and logs them (see otel-collector-config.yaml) - swap its exporter for
+  # a real backend (Jaeger, Tempo, a vendor) when you have one.
+  otel-collector:
+    image: otel/opentelemetry-collector:latest
+    profiles: ["otel"]
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otelcol/config.yaml:ro
+    ports:
+      - "4318:4318"
+
+volumes:
+  redis-data:

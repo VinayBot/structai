@@ -79,7 +79,7 @@ async def run_live_stream(
         )
 
         try:
-            limiter.check(user.id)
+            await limiter.check(user.id)
             await quota_service.check_and_increment(
                 session, scope="user", key=user.id, limit=settings.daily_quota_user
             )

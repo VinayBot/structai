@@ -46,7 +46,7 @@ async def enforce_rate_limit(
     limiter: RateLimiter = Depends(get_rate_limiter),
 ) -> None:
     try:
-        limiter.check(user.id)
+        await limiter.check(user.id)
     except RateLimitExceededError as exc:
         RATE_LIMIT_HITS_TOTAL.inc()
         raise RateLimitError(str(exc), retry_after_seconds=exc.retry_after_seconds) from exc
@@ -62,7 +62,7 @@ async def enforce_auth_rate_limit(
     real improvement over no limit at all against brute-force/credential-stuffing."""
     client_ip = request.client.host if request.client else "unknown"
     try:
-        limiter.check(f"ip:{client_ip}")
+        await limiter.check(f"ip:{client_ip}")
     except RateLimitExceededError as exc:
         RATE_LIMIT_HITS_TOTAL.inc()
         raise RateLimitError(str(exc), retry_after_seconds=exc.retry_after_seconds) from exc

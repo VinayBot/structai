@@ -98,7 +98,7 @@ def _guard_prompt(prompt: str, settings: Settings) -> str:
 async def _guard_model_call(session: AsyncSession, settings: Settings, user_id: str) -> None:
     """Applies the same per-user rate limit + daily quota the HTTP routes enforce."""
     try:
-        get_rate_limiter().check(user_id)
+        await get_rate_limiter().check(user_id)
     except RateLimitExceededError as exc:
         raise RateLimitError(str(exc)) from exc
     await quota_service.check_and_increment(

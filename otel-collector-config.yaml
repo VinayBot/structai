@@ -1,0 +1,20 @@
+# Minimal config for the optional otel-collector profile in docker-compose.yml.
+# Receives spans over OTLP/HTTP and logs them to the collector's own stdout -
+# enough to confirm StructAI's export is reaching something real. Swap the
+# `debug` exporter below for a real backend (Jaeger, Tempo, a vendor OTLP
+# endpoint) once you have one.
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+
+exporters:
+  debug:
+    verbosity: detailed
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      exporters: [debug]

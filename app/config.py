@@ -62,6 +62,10 @@ class Settings(BaseSettings):
     # credential (password or OAuth code) before a user is authenticated, so the
     # per-user limiter above doesn't cover them. Deliberately stricter.
     auth_rate_limit_per_min: int = 10
+    # "redis" requires the optional 'redis' extra - see app/guardrails/rate_limit.py.
+    # Never required for the default test suite (fakeredis stands in for it there).
+    rate_limit_backend: Literal["memory", "redis"] = "memory"
+    redis_url: str = "redis://localhost:6379/0"
     pii_mode: Literal["redact", "block"] = "redact"
     email_check_mx: bool = True
     email_check_mx_timeout_seconds: float = 3.0
