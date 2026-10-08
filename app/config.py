@@ -52,6 +52,8 @@ class Settings(BaseSettings):
     # Structured answers
     structured_max_attempts: int = 3
     structured_timeout_seconds: float = 30.0
+    # Selects app/prompts/structured_system_{version}.jinja2 (app/prompts/registry.py).
+    prompt_template_version: str = "v1"
 
     # Guardrails / abuse limits
     rate_limit_per_min: int = 20

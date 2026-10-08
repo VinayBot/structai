@@ -38,6 +38,29 @@ async def test_succeeds_on_first_attempt():
 
 
 @pytest.mark.asyncio
+async def test_schema_examples_are_included_in_the_system_prompt_sent_to_the_provider():
+    provider = FakeProvider(responses=['{"title": "hello"}'])
+    schema = SchemaDef(
+        fields=[FieldDef(name="title", type="string")],
+        examples=[{"title": "Paris"}],
+    )
+
+    await structured_service.answer(_gateway(provider), prompt="say hello", schema=schema)
+
+    assert len(provider.systems) == 1
+    assert '{"title": "Paris"}' in (provider.systems[0] or "")
+
+
+@pytest.mark.asyncio
+async def test_schema_without_examples_omits_the_examples_section():
+    provider = FakeProvider(responses=['{"title": "hello"}'])
+
+    await structured_service.answer(_gateway(provider), prompt="say hello", schema=_schema())
+
+    assert "Examples of valid responses" not in (provider.systems[0] or "")
+
+
+@pytest.mark.asyncio
 async def test_strips_markdown_json_fence():
     provider = FakeProvider(responses=['```json\n{"title": "hello"}\n```'])
     result = await structured_service.answer(

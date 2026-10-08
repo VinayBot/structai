@@ -26,12 +26,14 @@ class FakeProvider(ModelProvider):
         self.completion_tokens = completion_tokens
         self.calls = 0
         self.prompts: list[str] = []
+        self.systems: list[str | None] = []
 
     async def generate(
         self, *, system: str | None, prompt: str, model: str, timeout: float
     ) -> GenerationResult:
         self.calls += 1
         self.prompts.append(prompt)
+        self.systems.append(system)
 
         if self.delay:
             await asyncio.sleep(self.delay)

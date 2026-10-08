@@ -46,6 +46,12 @@ class SchemaDef(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     fields: list[FieldDef]
+    # Optional few-shot examples (each a dict of field_name -> value matching
+    # `fields`), inlined into the system prompt (app/prompts/registry.py) to steer
+    # the model's output format. There's no schema-storage feature in this codebase
+    # to pull "stored" examples from - a schema is submitted fresh with every
+    # request - so these ride along with the schema itself instead.
+    examples: list[dict] | None = None
 
     @field_validator("fields")
     @classmethod
