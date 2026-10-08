@@ -27,6 +27,7 @@ from pydantic import BaseModel, ValidationError
 from app.config import Settings
 from app.core.deps import get_current_user
 from app.core.errors import ConflictError, GuardrailError, RateLimitError, UnauthorizedError
+from app.core.http_client import get_http_client
 from app.core.logging import request_id_ctx
 from app.core.security import _create_token
 from app.db import get_session_maker, ping_db
@@ -957,8 +958,13 @@ def _node_config(node_id: str, settings: Settings) -> dict[str, ConfigValue]:
 
 
 async def check_status(settings: Settings) -> StatusResponse:
-    ollama = await _check_provider("ollama", OllamaProvider(settings.ollama_base_url).list_models)
-    groq = await _check_provider("groq", GroqProvider(settings.groq_api_key).list_models)
+    http_client = get_http_client()
+    ollama = await _check_provider(
+        "ollama", OllamaProvider(settings.ollama_base_url, http_client).list_models
+    )
+    groq = await _check_provider(
+        "groq", GroqProvider(settings.groq_api_key, http_client).list_models
+    )
     mcp_status = await _check_mcp(settings)
     db_ok = await ping_db()
 

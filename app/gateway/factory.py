@@ -3,6 +3,7 @@ from functools import lru_cache
 from fastapi import Depends
 
 from app.config import Settings, get_settings
+from app.core.http_client import get_http_client
 from app.gateway.providers.groq import GroqProvider
 from app.gateway.providers.ollama import OllamaProvider
 from app.gateway.router import ModelGateway, ProviderCandidate
@@ -10,8 +11,9 @@ from app.schemas.live_run import LiveRunRequest
 
 
 def build_gateway(settings: Settings) -> ModelGateway:
-    ollama = OllamaProvider(settings.ollama_base_url)
-    groq = GroqProvider(settings.groq_api_key)
+    http_client = get_http_client()
+    ollama = OllamaProvider(settings.ollama_base_url, http_client)
+    groq = GroqProvider(settings.groq_api_key, http_client)
 
     return ModelGateway(
         {
@@ -37,12 +39,15 @@ def reset_gateway_cache() -> None:
 
 
 def build_single_provider_gateway(name: str, settings: Settings) -> ModelGateway:
+    http_client = get_http_client()
     if name == "ollama":
         candidate = ProviderCandidate(
-            OllamaProvider(settings.ollama_base_url), settings.ollama_fast_model
+            OllamaProvider(settings.ollama_base_url, http_client), settings.ollama_fast_model
         )
     elif name == "groq":
-        candidate = ProviderCandidate(GroqProvider(settings.groq_api_key), settings.groq_fast_model)
+        candidate = ProviderCandidate(
+            GroqProvider(settings.groq_api_key, http_client), settings.groq_fast_model
+        )
     else:
         raise ValueError(f"unknown provider: {name}")
     return ModelGateway({"fast": [candidate], "smart": [candidate]})
@@ -57,8 +62,9 @@ def build_live_run_gateway(
     whether the other provider is kept as a fallback candidate or dropped entirely.
     `provider="auto"` always uses both, in the same order as `build_gateway`.
     """
-    ollama = OllamaProvider(settings.ollama_base_url)
-    groq = GroqProvider(settings.groq_api_key)
+    http_client = get_http_client()
+    ollama = OllamaProvider(settings.ollama_base_url, http_client)
+    groq = GroqProvider(settings.groq_api_key, http_client)
 
     ollama_default = settings.ollama_fast_model if tier == "fast" else settings.ollama_smart_model
     groq_default = settings.groq_fast_model if tier == "fast" else settings.groq_smart_model

@@ -7,6 +7,7 @@ from starlette.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.core.errors import register_exception_handlers
+from app.core.http_client import aclose_http_client, get_http_client
 from app.core.logging import configure_logging
 from app.core.middleware import metrics_middleware, request_id_middleware
 from app.db import get_session_maker
@@ -31,6 +32,10 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+    # Warms the shared connection pool every provider call uses before the app starts
+    # serving traffic, rather than paying its setup cost on whichever request happens
+    # to need a provider first.
+    get_http_client()
     try:
         imported = await import_existing_reports(get_session_maker())
         if imported:
@@ -38,6 +43,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     except Exception:
         logger.warning("skipping eval report import: DB not ready", exc_info=True)
     yield
+    await aclose_http_client()
 
 
 def create_app() -> FastAPI:

@@ -35,6 +35,11 @@ class Settings(BaseSettings):
     groq_fast_model: str = "openai/gpt-oss-20b"
     groq_smart_model: str = "openai/gpt-oss-120b"
 
+    # Shared httpx connection pool (app/core/http_client.py) used by every provider -
+    # defaults match httpx's own built-in defaults, just made tunable per deployment.
+    http_max_connections: int = 100
+    http_max_keepalive_connections: int = 20
+
     # Structured answers
     structured_max_attempts: int = 3
     structured_timeout_seconds: float = 30.0
