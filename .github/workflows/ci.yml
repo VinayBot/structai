@@ -63,3 +63,96 @@ jobs:
 
       - name: Build image
         run: docker build -t structai:ci .
+
+  e2e:
+    runs-on: ubuntu-latest
+    env:
+      # tests/harness/mock_app.py wires every provider call to
+      # tests/harness/mock_provider.py's fake model, so this job needs no reachable
+      # Ollama/Groq. app/main.py refuses to start with USE_FAKE_GATEWAY=true and
+      # ENV=production together - see test_refuses_to_start_with_fake_gateway_in_production.
+      USE_FAKE_GATEWAY: "true"
+      ENV: test
+      DATABASE_URL: "sqlite+aiosqlite:////tmp/structai-e2e.db"
+      JWT_SECRET: "ci-e2e-test-secret-at-least-32-bytes-long"
+      UPLOAD_DIR: "/tmp/structai-e2e-uploads"
+      EMAIL_CHECK_MX: "false"
+      # Most specs each register a fresh user (frontend/e2e/helpers.ts::seedAuthedSession).
+      # The production per-IP default (10/min) is tuned against credential-stuffing, not a
+      # legitimate burst of same-source CI traffic - raised here only, not in production.
+      AUTH_RATE_LIMIT_PER_MIN: "200"
+      RATE_LIMIT_PER_MIN: "200"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install backend dependencies
+        run: uv sync
+
+      - name: Run database migrations
+        run: uv run alembic upgrade head
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Install Playwright browsers
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Start mock backend
+        run: nohup uv run uvicorn tests.harness.mock_app:app --port 8000 > /tmp/mock-backend.log 2>&1 &
+
+      - name: Wait for mock backend to be ready
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8000/health > /dev/null; then
+              echo "mock backend is up"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::mock backend did not become ready in time"
+          cat /tmp/mock-backend.log
+          exit 1
+
+      - name: Start frontend dev server
+        working-directory: frontend
+        run: nohup npm run dev > /tmp/frontend-dev.log 2>&1 &
+
+      - name: Wait for frontend to be ready
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:5173/ > /dev/null; then
+              echo "frontend is up"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::frontend dev server did not become ready in time"
+          cat /tmp/frontend-dev.log
+          exit 1
+
+      - name: Run Playwright tests
+        working-directory: frontend
+        run: npx playwright test
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            frontend/playwright-report/
+            /tmp/mock-backend.log
+            /tmp/frontend-dev.log
+          retention-days: 7

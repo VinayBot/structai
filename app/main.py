@@ -52,6 +52,13 @@ def create_app() -> FastAPI:
     configure_logging()
     settings = get_settings()
 
+    # USE_FAKE_GATEWAY (tests/harness/mock_app.py) routes every provider call to a
+    # fake model for CI e2e runs - it must be structurally impossible for that to
+    # reach a real deployment, so this isn't just "disabled by default", it's a
+    # hard refusal to even start.
+    if settings.use_fake_gateway and settings.env == "production":
+        raise RuntimeError("refusing to start: USE_FAKE_GATEWAY=true with ENVIRONMENT=production")
+
     app = FastAPI(title="StructAI", lifespan=lifespan)
 
     app.add_middleware(

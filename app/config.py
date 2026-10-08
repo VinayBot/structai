@@ -9,6 +9,10 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     env: str = "development"
+    # Routes every provider call to tests/harness/mock_app.py's fake model instead
+    # of real Ollama/Groq - for CI e2e runs only. app/main.py refuses to start if
+    # this is true AND env == "production"; see that check for why.
+    use_fake_gateway: bool = False
 
     # Auth
     jwt_secret: str = "dev-insecure-secret-change-me"
