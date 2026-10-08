@@ -18,8 +18,8 @@ from app.core.security import (
     create_access_token,
     create_refresh_token,
     decode_token,
-    hash_password,
-    verify_password,
+    hash_password_async,
+    verify_password_async,
 )
 from app.guardrails.email import (
     EmailCheckResult,
@@ -76,7 +76,7 @@ async def register_user(session: AsyncSession, email: str, password: str) -> Use
     if existing is not None:
         raise ConflictError("an account with this email already exists")
 
-    user = User(email=email, hashed_password=hash_password(password))
+    user = User(email=email, hashed_password=await hash_password_async(password))
     session.add(user)
     await session.commit()
     return UserResponse(id=user.id, email=user.email, role=user.role)
@@ -95,7 +95,7 @@ async def authenticate_user(session: AsyncSession, email: str, password: str) ->
     # generic "invalid email or password" rather than crashing on None.
     if user is None or user.hashed_password is None:
         raise UnauthorizedError("invalid email or password")
-    if not verify_password(password, user.hashed_password):
+    if not await verify_password_async(password, user.hashed_password):
         raise UnauthorizedError("invalid email or password")
     if not user.is_active:
         raise UnauthorizedError("account is disabled")

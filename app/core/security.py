@@ -1,3 +1,4 @@
+import asyncio
 import uuid
 from datetime import UTC, datetime, timedelta
 
@@ -16,6 +17,18 @@ def verify_password(password: str, hashed: str) -> bool:
         return bcrypt.checkpw(password.encode("utf-8"), hashed.encode("utf-8"))
     except ValueError:
         return False
+
+
+async def hash_password_async(password: str) -> str:
+    """bcrypt is CPU-bound C code with no asyncio awareness - calling it directly from
+    a request handler blocks the entire event loop (every other in-flight request, not
+    just this one) for the ~100ms+ its cost factor is tuned to take. to_thread moves
+    that work off the loop; the cost factor and hash format are unchanged."""
+    return await asyncio.to_thread(hash_password, password)
+
+
+async def verify_password_async(password: str, hashed: str) -> bool:
+    return await asyncio.to_thread(verify_password, password, hashed)
 
 
 class TokenError(Exception):
