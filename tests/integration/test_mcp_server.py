@@ -6,10 +6,12 @@ service functions directly - so these catch wiring mistakes a unit test on
 app/services/* alone would miss.
 """
 
+import io
 import json
 from datetime import timedelta
 
 import pytest
+from fastapi import UploadFile
 from mcp.server.fastmcp.exceptions import ToolError
 from sqlalchemy import select
 
@@ -160,13 +162,15 @@ async def test_list_and_get_files(mcp_tokens):
     settings = get_settings()
     async with get_session_maker()() as session:
         user = await session.scalar(select(User).where(User.email == "mcp-user@example.com"))
+        png_bytes = b"\x89PNG\r\n\x1a\n-fake-but-signature-correct-bytes"
+        upload = UploadFile(file=io.BytesIO(png_bytes), filename="sunset.png")
         attachment = await file_service.save_file(
             session,
             user_id=user.id,
             chat_id=None,
             filename="sunset.png",
             content_type="image/png",
-            content=b"\x89PNG\r\n\x1a\n-fake-but-signature-correct-bytes",
+            file=upload,
             upload_dir=settings.upload_dir,
             max_size_bytes=settings.max_upload_size_bytes,
             allowed_content_types=settings.allowed_upload_content_type_set,

@@ -1,21 +1,31 @@
+import asyncio
 import json
+import os
 import uuid
 from collections.abc import Callable
 from pathlib import Path
 
+from fastapi import UploadFile
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import NotFoundError, PayloadTooLargeError, UnsupportedMediaTypeError
 from app.models.file import FileAttachment
 
+# Read/write in bounded chunks so neither a huge upload nor a slow client ever
+# requires buffering the whole file in memory.
+_CHUNK_SIZE_BYTES = 64 * 1024
+# Longest signature we check (WEBP, byte 11) needs 12 bytes; 512 leaves generous
+# headroom without reading meaningfully more of the file than necessary.
+_SIGNATURE_PREFIX_BYTES = 512
+
 # The client-supplied Content-Type header is trivially spoofable - a request can
 # claim "image/png" for an uploaded shell script just as easily as a real PNG.
 # These checks verify the bytes actually look like what's claimed, closing that
 # gap for the types in ALLOWED_UPLOAD_CONTENT_TYPES. Binary types get a real
-# signature ("magic bytes") check; the text-ish types have no such signature, so
-# they get the next best thing - a decode/parse check that at least rejects
-# arbitrary binary data wearing a text content-type.
+# signature ("magic bytes") check against just the first bytes of the stream;
+# the text-ish types have no such signature, so they get the next best thing -
+# a decode/parse check against the full (already size-capped) content on disk.
 _MAGIC_BYTE_CHECKS: dict[str, Callable[[bytes], bool]] = {
     "image/png": lambda b: b.startswith(b"\x89PNG\r\n\x1a\n"),
     "image/jpeg": lambda b: b.startswith(b"\xff\xd8\xff"),
@@ -25,28 +35,74 @@ _MAGIC_BYTE_CHECKS: dict[str, Callable[[bytes], bool]] = {
 }
 
 
-def _content_matches_claimed_type(content: bytes, content_type: str) -> bool:
-    check = _MAGIC_BYTE_CHECKS.get(content_type)
-    if check is not None:
-        return check(content)
+def _is_valid_json(content: bytes) -> bool:
+    try:
+        json.loads(content)
+    except ValueError:
+        return False
+    return True
 
-    if content_type == "application/json":
-        try:
-            json.loads(content)
-        except ValueError:
-            return False
-        return True
 
-    if content_type in ("text/plain", "text/csv", "text/markdown"):
-        try:
-            content.decode("utf-8")
-        except UnicodeDecodeError:
-            return False
-        return True
+def _is_valid_utf8(content: bytes) -> bool:
+    try:
+        content.decode("utf-8")
+    except UnicodeDecodeError:
+        return False
+    return True
 
-    # Only reachable if allowed_upload_content_types grows a type with no entry
-    # here - fail closed on an unverifiable type rather than silently accept it.
-    return False
+
+_FULL_CONTENT_CHECKS: dict[str, Callable[[bytes], bool]] = {
+    "application/json": _is_valid_json,
+    "text/plain": _is_valid_utf8,
+    "text/csv": _is_valid_utf8,
+    "text/markdown": _is_valid_utf8,
+}
+
+
+async def _write_chunked(
+    file: UploadFile, tmp_path: Path, max_size_bytes: int
+) -> tuple[int, bytes]:
+    """Streams `file` into `tmp_path` in bounded chunks, off the event loop.
+
+    Returns (total bytes written, first _SIGNATURE_PREFIX_BYTES of content). Raises
+    PayloadTooLargeError the instant the running count exceeds max_size_bytes, without
+    reading (or holding) any more of the stream than that.
+    """
+    total = 0
+    prefix = b""
+    handle = await asyncio.to_thread(tmp_path.open, "wb")
+    try:
+        while True:
+            chunk = await file.read(_CHUNK_SIZE_BYTES)
+            if not chunk:
+                break
+            total += len(chunk)
+            if total > max_size_bytes:
+                raise PayloadTooLargeError(f"file exceeds the {max_size_bytes}-byte upload limit")
+            if len(prefix) < _SIGNATURE_PREFIX_BYTES:
+                prefix += chunk[: _SIGNATURE_PREFIX_BYTES - len(prefix)]
+            await asyncio.to_thread(handle.write, chunk)
+    finally:
+        await asyncio.to_thread(handle.close)
+    return total, prefix
+
+
+def _verify_content(tmp_path: Path, prefix: bytes, content_type: str) -> None:
+    """Fail-closed: a content_type outside both check tables (i.e. someone widened
+    ALLOWED_UPLOAD_CONTENT_TYPES without adding a matching entry here) is rejected
+    rather than silently accepted unverified."""
+    if content_type in _MAGIC_BYTE_CHECKS:
+        matched = _MAGIC_BYTE_CHECKS[content_type](prefix)
+    elif content_type in _FULL_CONTENT_CHECKS:
+        full_content = tmp_path.read_bytes()
+        matched = _FULL_CONTENT_CHECKS[content_type](full_content)
+    else:
+        matched = False
+
+    if not matched:
+        raise UnsupportedMediaTypeError(
+            f"file content does not match the claimed content type '{content_type}'"
+        )
 
 
 async def save_file(
@@ -56,7 +112,7 @@ async def save_file(
     chat_id: str | None,
     filename: str,
     content_type: str,
-    content: bytes,
+    file: UploadFile,
     upload_dir: str,
     max_size_bytes: int,
     allowed_content_types: set[str],
@@ -64,21 +120,25 @@ async def save_file(
     if content_type not in allowed_content_types:
         raise UnsupportedMediaTypeError(f"content type '{content_type}' is not accepted")
 
-    if not _content_matches_claimed_type(content, content_type):
-        raise UnsupportedMediaTypeError(
-            f"file content does not match the claimed content type '{content_type}'"
-        )
-
-    if len(content) > max_size_bytes:
-        raise PayloadTooLargeError(f"file exceeds the {max_size_bytes}-byte upload limit")
-
     user_dir = Path(upload_dir) / user_id
-    user_dir.mkdir(parents=True, exist_ok=True)
+    await asyncio.to_thread(user_dir.mkdir, parents=True, exist_ok=True)
 
     file_id = uuid.uuid4().hex
     safe_name = Path(filename).name
-    storage_path = user_dir / f"{file_id}_{safe_name}"
-    storage_path.write_bytes(content)
+    tmp_path = user_dir / f".tmp-{file_id}"
+
+    try:
+        total_bytes, prefix = await _write_chunked(file, tmp_path, max_size_bytes)
+        await asyncio.to_thread(_verify_content, tmp_path, prefix, content_type)
+
+        storage_path = user_dir / f"{file_id}_{safe_name}"
+        await asyncio.to_thread(os.replace, tmp_path, storage_path)
+    except BaseException:
+        # BaseException, not Exception: a client disconnect surfaces as
+        # asyncio.CancelledError, which is deliberately not an Exception subclass -
+        # the temp file must still be cleaned up on that path too.
+        await asyncio.to_thread(tmp_path.unlink, missing_ok=True)
+        raise
 
     attachment = FileAttachment(
         id=file_id,
@@ -86,7 +146,7 @@ async def save_file(
         chat_id=chat_id,
         filename=safe_name,
         content_type=content_type,
-        size_bytes=len(content),
+        size_bytes=total_bytes,
         storage_path=str(storage_path),
     )
     session.add(attachment)
@@ -133,11 +193,3 @@ async def delete_file(session: AsyncSession, *, user_id: str, file_id: str) -> N
     Path(attachment.storage_path).unlink(missing_ok=True)
     await session.delete(attachment)
     await session.commit()
-
-
-async def read_content(
-    session: AsyncSession, *, user_id: str, file_id: str
-) -> tuple[bytes, str, str]:
-    attachment = await get_file(session, user_id=user_id, file_id=file_id)
-    content = Path(attachment.storage_path).read_bytes()
-    return content, attachment.content_type, attachment.filename
