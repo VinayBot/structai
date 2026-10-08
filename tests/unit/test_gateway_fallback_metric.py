@@ -39,10 +39,10 @@ async def test_fallback_to_second_provider_increments_fallback_metric():
     success_before = _calls("secondary-fb", "model-b", "success")
     fallbacks_before = _fallbacks("primary-fb", "secondary-fb")
 
-    text, provider_name, _ = await gateway.generate(tier="fast", system=None, prompt="hi")
+    result = await gateway.generate(tier="fast", system=None, prompt="hi")
 
-    assert text == "ok"
-    assert provider_name == "secondary-fb"
+    assert result.text == "ok"
+    assert result.provider == "secondary-fb"
     assert _calls("primary-fb", "model-a", "failure") == failures_before + 1
     assert _calls("secondary-fb", "model-b", "success") == success_before + 1
     assert _fallbacks("primary-fb", "secondary-fb") == fallbacks_before + 1

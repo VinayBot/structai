@@ -42,6 +42,18 @@ GATEWAY_CALL_DURATION_SECONDS = Histogram(
     ["provider", "model"],
 )
 
+TOKENS_CONSUMED_TOTAL = Counter(
+    "structai_tokens_consumed_total",
+    "Tokens consumed per successful model provider call",
+    ["provider", "model", "type"],  # type: "prompt" | "completion"
+)
+
+ESTIMATED_COST_USD_TOTAL = Counter(
+    "structai_estimated_cost_usd_total",
+    "Estimated USD cost of model usage, from a configured per-model price table",
+    ["provider", "model"],
+)
+
 GUARDRAIL_BLOCKS_TOTAL = Counter(
     "structai_guardrail_blocks_total",
     "Requests blocked by a guardrail before reaching a model",

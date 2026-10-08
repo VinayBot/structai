@@ -1,6 +1,7 @@
 from functools import lru_cache
 from typing import Literal
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -34,6 +35,14 @@ class Settings(BaseSettings):
     groq_api_key: str = ""
     groq_fast_model: str = "openai/gpt-oss-20b"
     groq_smart_model: str = "openai/gpt-oss-120b"
+
+    # Optional cost estimation (app/gateway/router.py::estimate_cost_usd) - keyed
+    # "{provider}:{model}" -> {"prompt": $ per 1K tokens, "completion": $ per 1K
+    # tokens}. No price is ever hardcoded in application logic; an unlisted
+    # provider/model (e.g. local Ollama, or simply leaving this unset) costs 0.
+    # JSON object via env, e.g.:
+    #   TOKEN_PRICE_TABLE={"groq:openai/gpt-oss-20b": {"prompt": 0.0001, "completion": 0.0001}}
+    token_price_table: dict[str, dict[str, float]] = Field(default_factory=dict)
 
     # Shared httpx connection pool (app/core/http_client.py) used by every provider -
     # defaults match httpx's own built-in defaults, just made tunable per deployment.

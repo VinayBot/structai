@@ -133,6 +133,8 @@ def _serialize_message(message) -> dict:
         "structured_data": message.structured_data,
         "provider": message.provider,
         "model": message.model,
+        "prompt_tokens": message.prompt_tokens,
+        "completion_tokens": message.completion_tokens,
         "created_at": message.created_at.isoformat(),
     }
 
@@ -191,6 +193,8 @@ async def ask_structured(
         "provider": result.provider,
         "model": result.model,
         "attempts": result.attempts,
+        "prompt_tokens": result.prompt_tokens,
+        "completion_tokens": result.completion_tokens,
     }
 
 

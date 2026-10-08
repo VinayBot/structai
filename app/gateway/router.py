@@ -4,15 +4,48 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 from app.core.metrics import (
+    ESTIMATED_COST_USD_TOTAL,
     GATEWAY_CALL_DURATION_SECONDS,
     GATEWAY_CALLS_TOTAL,
     GATEWAY_FALLBACKS_TOTAL,
+    TOKENS_CONSUMED_TOTAL,
 )
 from app.gateway.providers.base import ModelProvider, ProviderError
+
+PriceTable = dict[str, dict[str, float]]
 
 
 class GatewayError(Exception):
     """Raised when every candidate provider for a tier fails."""
+
+
+@dataclass
+class GatewayResult:
+    text: str
+    provider: str
+    model: str
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+
+
+def estimate_cost_usd(
+    *,
+    provider: str,
+    model: str,
+    prompt_tokens: int,
+    completion_tokens: int,
+    price_table: PriceTable,
+) -> float:
+    """price_table is keyed "{provider}:{model}" -> {"prompt": $ per 1K tokens,
+    "completion": $ per 1K tokens}, supplied entirely via settings.token_price_table -
+    no price is ever hardcoded here. A provider/model with no entry (e.g. local
+    Ollama, or simply nothing configured) costs 0, not an error."""
+    prices = price_table.get(f"{provider}:{model}")
+    if not prices:
+        return 0.0
+    prompt_price = prices.get("prompt", 0.0)
+    completion_price = prices.get("completion", 0.0)
+    return (prompt_tokens / 1000) * prompt_price + (completion_tokens / 1000) * completion_price
 
 
 @dataclass
@@ -65,10 +98,12 @@ class ModelGateway:
         tiers: dict[str, list[ProviderCandidate]],
         *,
         breaker: CircuitBreaker | None = None,
+        price_table: PriceTable | None = None,
     ):
         self._tiers = tiers
         self._breaker = breaker or CircuitBreaker()
         self._semaphores: dict[str, asyncio.Semaphore] = {}
+        self._price_table = price_table or {}
 
     def _semaphore_for(self, candidate: ProviderCandidate) -> asyncio.Semaphore:
         key = candidate.provider.name
@@ -78,7 +113,7 @@ class ModelGateway:
 
     async def generate(
         self, *, tier: str, system: str | None, prompt: str, timeout: float = 30.0
-    ) -> tuple[str, str, str]:
+    ) -> GatewayResult:
         candidates = self._tiers.get(tier)
         if not candidates:
             raise GatewayError(f"unknown tier: {tier}")
@@ -94,7 +129,7 @@ class ModelGateway:
             call_start = time.monotonic()
             try:
                 async with self._semaphore_for(candidate):
-                    text = await asyncio.wait_for(
+                    result = await asyncio.wait_for(
                         candidate.provider.generate(
                             system=system,
                             prompt=prompt,
@@ -125,6 +160,31 @@ class ModelGateway:
                 GATEWAY_FALLBACKS_TOTAL.labels(
                     from_provider=first_provider_name, to_provider=provider_name
                 ).inc()
-            return text, provider_name, candidate.model
+            if result.prompt_tokens:
+                TOKENS_CONSUMED_TOTAL.labels(
+                    provider=provider_name, model=candidate.model, type="prompt"
+                ).inc(result.prompt_tokens)
+            if result.completion_tokens:
+                TOKENS_CONSUMED_TOTAL.labels(
+                    provider=provider_name, model=candidate.model, type="completion"
+                ).inc(result.completion_tokens)
+            cost = estimate_cost_usd(
+                provider=provider_name,
+                model=candidate.model,
+                prompt_tokens=result.prompt_tokens,
+                completion_tokens=result.completion_tokens,
+                price_table=self._price_table,
+            )
+            if cost:
+                ESTIMATED_COST_USD_TOTAL.labels(provider=provider_name, model=candidate.model).inc(
+                    cost
+                )
+            return GatewayResult(
+                text=result.text,
+                provider=provider_name,
+                model=candidate.model,
+                prompt_tokens=result.prompt_tokens,
+                completion_tokens=result.completion_tokens,
+            )
 
         raise GatewayError(f"all providers failed for tier '{tier}': {'; '.join(errors)}")

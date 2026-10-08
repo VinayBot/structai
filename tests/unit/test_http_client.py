@@ -64,11 +64,11 @@ async def test_ollama_and_groq_providers_share_the_same_injected_client_instance
     ollama = OllamaProvider("http://ollama.local", client)
     groq = GroqProvider("test-key", client)
 
-    ollama_text = await ollama.generate(system=None, prompt="hi", model="m", timeout=5)
-    groq_text = await groq.generate(system=None, prompt="hi", model="m", timeout=5)
+    ollama_result = await ollama.generate(system=None, prompt="hi", model="m", timeout=5)
+    groq_result = await groq.generate(system=None, prompt="hi", model="m", timeout=5)
 
-    assert ollama_text == "hi from ollama"
-    assert groq_text == "hi from groq"
+    assert ollama_result.text == "hi from ollama"
+    assert groq_result.text == "hi from groq"
     assert ollama._http_client is client
     assert groq._http_client is client
     assert len(requests) == 2

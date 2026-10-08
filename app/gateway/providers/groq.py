@@ -1,6 +1,6 @@
 import httpx
 
-from app.gateway.providers.base import ModelProvider, ProviderError
+from app.gateway.providers.base import GenerationResult, ModelProvider, ProviderError
 
 
 class GroqProvider(ModelProvider):
@@ -16,7 +16,9 @@ class GroqProvider(ModelProvider):
         self.base_url = base_url.rstrip("/")
         self._http_client = http_client
 
-    async def generate(self, *, system: str | None, prompt: str, model: str, timeout: float) -> str:
+    async def generate(
+        self, *, system: str | None, prompt: str, model: str, timeout: float
+    ) -> GenerationResult:
         if not self.api_key:
             raise ProviderError("groq api key not configured")
 
@@ -37,7 +39,15 @@ class GroqProvider(ModelProvider):
             )
             resp.raise_for_status()
             data = resp.json()
-            return data["choices"][0]["message"]["content"]
+            # usage is OpenAI-shaped (data["usage"]["prompt_tokens"/"completion_tokens"]),
+            # but some gateways/models omit it or only report one side - never let
+            # token accounting fail the actual generation, default each side to 0.
+            usage = data.get("usage") or {}
+            return GenerationResult(
+                text=data["choices"][0]["message"]["content"],
+                prompt_tokens=usage.get("prompt_tokens", 0) or 0,
+                completion_tokens=usage.get("completion_tokens", 0) or 0,
+            )
         except (httpx.HTTPError, KeyError, IndexError, ValueError) as exc:
             raise ProviderError(f"groq request failed: {exc}") from exc
 

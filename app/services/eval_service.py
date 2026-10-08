@@ -158,6 +158,8 @@ async def persist_run(
                 latency_ms=result.latency_ms,
                 output_json=json.dumps(result.data) if result.data is not None else None,
                 trace_id=result.trace_id,
+                prompt_tokens=result.prompt_tokens,
+                completion_tokens=result.completion_tokens,
             )
         )
 
@@ -202,6 +204,8 @@ async def get_run_detail(session: AsyncSession, run_id: str) -> EvalRunDetail:
             latency_ms=r.latency_ms,
             data=json.loads(r.output_json) if r.output_json is not None else None,
             trace_id=r.trace_id,
+            prompt_tokens=r.prompt_tokens,
+            completion_tokens=r.completion_tokens,
         )
         for r in case_results.all()
     ]

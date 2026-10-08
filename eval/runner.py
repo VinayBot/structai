@@ -85,6 +85,8 @@ async def run_case(
         attempts=result.attempts,
         latency_ms=(clock() - start) * 1000,
         data=result.data,
+        prompt_tokens=result.prompt_tokens,
+        completion_tokens=result.completion_tokens,
     )
 
 

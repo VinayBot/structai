@@ -42,6 +42,8 @@ class StructuredResult:
     model: str
     attempts: int
     output_pii: PiiScanResult = field(default_factory=lambda: _NO_PII)
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
 
 
 @dataclass
@@ -129,9 +131,12 @@ async def run_structured_loop(
                 async with tracer.start_span(
                     "gateway.generate", tier=tier, attempt=attempt
                 ) as gen_span:
-                    text, provider_name, model_name = await gateway.generate(
+                    gen_result = await gateway.generate(
                         tier=tier, system=system, prompt=user_prompt, timeout=timeout
                     )
+                    text = gen_result.text
+                    provider_name = gen_result.provider
+                    model_name = gen_result.model
                     gen_span.attributes["provider"] = provider_name
                     gen_span.attributes["model"] = model_name
             except GatewayError as exc:
@@ -186,6 +191,8 @@ async def run_structured_loop(
                     model=model_name,
                     attempts=attempt,
                     output_pii=output_pii,
+                    prompt_tokens=gen_result.prompt_tokens,
+                    completion_tokens=gen_result.completion_tokens,
                 ),
             )
             return

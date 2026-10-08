@@ -1,6 +1,6 @@
 import httpx
 
-from app.gateway.providers.base import ModelProvider, ProviderError
+from app.gateway.providers.base import GenerationResult, ModelProvider, ProviderError
 
 
 class OllamaProvider(ModelProvider):
@@ -10,7 +10,9 @@ class OllamaProvider(ModelProvider):
         self.base_url = base_url.rstrip("/")
         self._http_client = http_client
 
-    async def generate(self, *, system: str | None, prompt: str, model: str, timeout: float) -> str:
+    async def generate(
+        self, *, system: str | None, prompt: str, model: str, timeout: float
+    ) -> GenerationResult:
         messages = []
         if system:
             messages.append({"role": "system", "content": system})
@@ -27,7 +29,14 @@ class OllamaProvider(ModelProvider):
             )
             resp.raise_for_status()
             data = resp.json()
-            return data["message"]["content"]
+            return GenerationResult(
+                text=data["message"]["content"],
+                # Ollama's /api/chat reports these at the top level, not nested under
+                # a "usage" key like OpenAI-style APIs - absent (e.g. an older Ollama
+                # version) defaults to 0 rather than failing the whole call.
+                prompt_tokens=data.get("prompt_eval_count", 0),
+                completion_tokens=data.get("eval_count", 0),
+            )
         except (httpx.HTTPError, KeyError, ValueError) as exc:
             raise ProviderError(f"ollama request failed: {exc}") from exc
 

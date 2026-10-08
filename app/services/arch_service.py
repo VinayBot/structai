@@ -31,7 +31,7 @@ from app.core.http_client import get_http_client
 from app.core.logging import request_id_ctx
 from app.core.security import _create_token
 from app.db import get_session_maker, ping_db
-from app.gateway.providers.base import ModelProvider, ProviderError
+from app.gateway.providers.base import GenerationResult, ModelProvider, ProviderError
 from app.gateway.providers.groq import GroqProvider
 from app.gateway.providers.ollama import OllamaProvider
 from app.gateway.router import ModelGateway, ProviderCandidate
@@ -867,15 +867,17 @@ class _ScriptedProvider(ModelProvider):
         self._calls = 0
         self.received_prompts: list[str] = []
 
-    async def generate(self, *, system: str | None, prompt: str, model: str, timeout: float) -> str:
+    async def generate(
+        self, *, system: str | None, prompt: str, model: str, timeout: float
+    ) -> GenerationResult:
         self._calls += 1
         self.received_prompts.append(prompt)
         if self._raises is not None:
             raise self._raises
         if not self._responses:
-            return "{}"
+            return GenerationResult(text="{}")
         index = min(self._calls - 1, len(self._responses) - 1)
-        return self._responses[index]
+        return GenerationResult(text=self._responses[index])
 
 
 def get_graph(openapi_schema: dict[str, Any]) -> GraphResponse:

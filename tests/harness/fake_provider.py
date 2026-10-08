@@ -1,6 +1,6 @@
 import asyncio
 
-from app.gateway.providers.base import ModelProvider, ProviderError
+from app.gateway.providers.base import GenerationResult, ModelProvider, ProviderError
 
 
 class FakeProvider(ModelProvider):
@@ -11,16 +11,25 @@ class FakeProvider(ModelProvider):
         fail_times: int = 0,
         delay: float = 0.0,
         raises: Exception | None = None,
+        prompt_tokens: int = 0,
+        completion_tokens: int = 0,
     ):
         self.name = name
         self.responses = responses
         self.fail_times = fail_times
         self.delay = delay
         self.raises = raises
+        # Default 0 (not simulated) so existing tests that don't care about token
+        # accounting see the exact same behavior as before it existed; tests that do
+        # care pass these explicitly.
+        self.prompt_tokens = prompt_tokens
+        self.completion_tokens = completion_tokens
         self.calls = 0
         self.prompts: list[str] = []
 
-    async def generate(self, *, system: str | None, prompt: str, model: str, timeout: float) -> str:
+    async def generate(
+        self, *, system: str | None, prompt: str, model: str, timeout: float
+    ) -> GenerationResult:
         self.calls += 1
         self.prompts.append(prompt)
 
@@ -33,8 +42,13 @@ class FakeProvider(ModelProvider):
         if self.calls <= self.fail_times:
             raise ProviderError(f"{self.name} scripted failure #{self.calls}")
 
-        if not self.responses:
-            return "{}"
+        text = "{}"
+        if self.responses:
+            index = (self.calls - self.fail_times - 1) % len(self.responses)
+            text = self.responses[index]
 
-        index = (self.calls - self.fail_times - 1) % len(self.responses)
-        return self.responses[index]
+        return GenerationResult(
+            text=text,
+            prompt_tokens=self.prompt_tokens,
+            completion_tokens=self.completion_tokens,
+        )

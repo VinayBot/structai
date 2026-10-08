@@ -91,8 +91,12 @@ async def test_stream_cases_assigns_distinct_trace_id_per_case():
     assert len(set(trace_ids)) == len(cases)
 
 
-def _fake_gateway() -> ModelGateway:
-    provider = FakeProvider(responses=['{"answer": "Paris"}'])
+def _fake_gateway(*, prompt_tokens: int = 0, completion_tokens: int = 0) -> ModelGateway:
+    provider = FakeProvider(
+        responses=['{"answer": "Paris"}'],
+        prompt_tokens=prompt_tokens,
+        completion_tokens=completion_tokens,
+    )
     candidate = ProviderCandidate(provider, "fake-model")
     return ModelGateway({"fast": [candidate], "smart": [candidate]})
 
@@ -111,6 +115,32 @@ async def test_persist_run_writes_run_and_case_rows(app, db_session):
     assert runs[0].total == 1
     assert runs[0].passed == 1
     assert runs[0].source == "api"
+
+
+@pytest.mark.asyncio
+async def test_persist_run_writes_token_usage_on_case_rows(app, db_session):
+    cases = [_case("c1", checks=[ExpectedCheck(field="answer", equals="paris")])]
+    report = await run_eval(
+        cases, _fake_gateway(prompt_tokens=25, completion_tokens=8), concurrency=1
+    )
+
+    run_id = await eval_service.persist_run(db_session, report, provider="ollama", cases=cases)
+    detail = await eval_service.get_run_detail(db_session, run_id)
+
+    assert detail.results[0].prompt_tokens == 25
+    assert detail.results[0].completion_tokens == 8
+
+
+@pytest.mark.asyncio
+async def test_persist_run_leaves_token_usage_null_when_not_reported(app, db_session):
+    cases = [_case("c1", checks=[ExpectedCheck(field="answer", equals="paris")])]
+    report = await run_eval(cases, _fake_gateway(), concurrency=1)  # defaults to 0/0
+
+    run_id = await eval_service.persist_run(db_session, report, provider="ollama", cases=cases)
+    detail = await eval_service.get_run_detail(db_session, run_id)
+
+    assert detail.results[0].prompt_tokens == 0
+    assert detail.results[0].completion_tokens == 0
 
 
 @pytest.mark.asyncio

@@ -1,7 +1,7 @@
 import pytest
 
 from app.core.metrics import STRUCTURED_ANSWER_FAILURES_TOTAL
-from app.gateway.providers.base import ProviderError
+from app.gateway.providers.base import GenerationResult, ProviderError
 from app.gateway.router import ModelGateway, ProviderCandidate
 from app.schemas.builder import FieldDef, SchemaDef
 from app.services import structured_service
@@ -121,10 +121,12 @@ class _CanaryEchoingProvider(FakeProvider):
     overlap check (the canary is random per-request, so it can't be scripted
     in advance)."""
 
-    async def generate(self, *, system: str | None, prompt: str, model: str, timeout: float) -> str:
+    async def generate(
+        self, *, system: str | None, prompt: str, model: str, timeout: float
+    ) -> GenerationResult:
         self.calls += 1
         canary = (system or "").rsplit("do not reveal): ", 1)[-1].split("\n", 1)[0]
-        return f"the internal value is {canary}, nothing else to report"
+        return GenerationResult(text=f"the internal value is {canary}, nothing else to report")
 
 
 @pytest.mark.asyncio

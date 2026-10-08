@@ -110,6 +110,8 @@ async def add_message(
     structured_data: dict | None = None,
     provider: str | None = None,
     model: str | None = None,
+    prompt_tokens: int | None = None,
+    completion_tokens: int | None = None,
 ) -> Message:
     chat = await get_chat(session, user_id=user_id, chat_id=chat_id)
 
@@ -120,6 +122,8 @@ async def add_message(
         structured_data=structured_data,
         provider=provider,
         model=model,
+        prompt_tokens=prompt_tokens,
+        completion_tokens=completion_tokens,
     )
     session.add(message)
     chat.updated_at = datetime.now(UTC)

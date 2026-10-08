@@ -47,6 +47,51 @@ async def test_add_and_list_messages(client, auth_headers):
 
 
 @pytest.mark.asyncio
+async def test_message_persists_token_usage(client, auth_headers):
+    create = await client.post("/api/v1/chats", json={"title": "Chat"}, headers=auth_headers)
+    chat_id = create.json()["id"]
+
+    msg = await client.post(
+        f"/api/v1/chats/{chat_id}/messages",
+        json={
+            "role": "assistant",
+            "content": "the answer",
+            "provider": "groq",
+            "model": "openai/gpt-oss-20b",
+            "prompt_tokens": 42,
+            "completion_tokens": 17,
+        },
+        headers=auth_headers,
+    )
+    assert msg.status_code == 201
+    assert msg.json()["prompt_tokens"] == 42
+    assert msg.json()["completion_tokens"] == 17
+
+    detail = await client.get(f"/api/v1/chats/{chat_id}", headers=auth_headers)
+    stored = detail.json()["messages"][0]
+    assert stored["prompt_tokens"] == 42
+    assert stored["completion_tokens"] == 17
+
+
+@pytest.mark.asyncio
+async def test_message_without_token_usage_defaults_to_null(client, auth_headers):
+    """A plain user message (no provider call behind it) has no token counts at
+    all - null, not 0, since 0 would misleadingly claim "a call happened and used
+    no tokens" rather than "no call happened"."""
+    create = await client.post("/api/v1/chats", json={"title": "Chat"}, headers=auth_headers)
+    chat_id = create.json()["id"]
+
+    msg = await client.post(
+        f"/api/v1/chats/{chat_id}/messages",
+        json={"role": "user", "content": "hello"},
+        headers=auth_headers,
+    )
+    assert msg.status_code == 201
+    assert msg.json()["prompt_tokens"] is None
+    assert msg.json()["completion_tokens"] is None
+
+
+@pytest.mark.asyncio
 async def test_list_chats_filtered_by_project(client, auth_headers):
     project = await client.post("/api/v1/projects", json={"name": "P"}, headers=auth_headers)
     project_id = project.json()["id"]

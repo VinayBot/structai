@@ -93,6 +93,8 @@ async def add_message(
         structured_data=body.structured_data,
         provider=body.provider,
         model=body.model,
+        prompt_tokens=body.prompt_tokens,
+        completion_tokens=body.completion_tokens,
     )
     return MessageResponse.model_validate(message, from_attributes=True)
 

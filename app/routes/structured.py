@@ -69,6 +69,8 @@ async def answer_endpoint(
         model=result.model,
         attempts=result.attempts,
         meta=_merge_pii_meta(input_scan, result.output_pii),
+        prompt_tokens=result.prompt_tokens,
+        completion_tokens=result.completion_tokens,
     )
 
 
@@ -104,6 +106,8 @@ async def answer_stream_endpoint(
                 payload["attempts"] = event.result.attempts
                 meta = _merge_pii_meta(input_scan, event.result.output_pii)
                 payload["meta"] = meta.model_dump()
+                payload["prompt_tokens"] = event.result.prompt_tokens
+                payload["completion_tokens"] = event.result.completion_tokens
             yield f"data: {json.dumps(payload)}\n\n"
 
     return StreamingResponse(event_source(), media_type="text/event-stream")

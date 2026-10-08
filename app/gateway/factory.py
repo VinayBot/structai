@@ -25,7 +25,8 @@ def build_gateway(settings: Settings) -> ModelGateway:
                 ProviderCandidate(ollama, settings.ollama_smart_model),
                 ProviderCandidate(groq, settings.groq_smart_model),
             ],
-        }
+        },
+        price_table=settings.token_price_table,
     )
 
 
@@ -50,7 +51,9 @@ def build_single_provider_gateway(name: str, settings: Settings) -> ModelGateway
         )
     else:
         raise ValueError(f"unknown provider: {name}")
-    return ModelGateway({"fast": [candidate], "smart": [candidate]})
+    return ModelGateway(
+        {"fast": [candidate], "smart": [candidate]}, price_table=settings.token_price_table
+    )
 
 
 def build_live_run_gateway(
@@ -83,7 +86,7 @@ def build_live_run_gateway(
     else:
         candidates = [ollama_candidate, groq_candidate]
 
-    return ModelGateway({tier: candidates})
+    return ModelGateway({tier: candidates}, price_table=settings.token_price_table)
 
 
 async def get_live_run_gateway(

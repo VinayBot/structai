@@ -35,3 +35,5 @@ class StructuredAnswerResponse(BaseModel):
     model: str
     attempts: int
     meta: GuardrailsMeta = Field(default_factory=GuardrailsMeta)
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
