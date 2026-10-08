@@ -58,18 +58,36 @@ async def list_messages(
     *,
     user_id: str,
     chat_id: str,
+    chat: Chat | None = None,
     limit: int | None = None,
     offset: int = 0,
+    include_total: bool = True,
 ) -> tuple[list[Message], int]:
     """limit=None (the default) returns the full conversation - used when embedding
     messages into a chat's detail view, where truncating to a page would silently
     hide history. The standalone GET /chats/{id}/messages route opts into a real
-    limit for callers that actually want to page through a long conversation."""
-    await get_chat(session, user_id=user_id, chat_id=chat_id)
+    limit for callers that actually want to page through a long conversation.
 
-    total = await session.scalar(
-        select(func.count()).select_from(Message).where(Message.chat_id == chat_id)
-    )
+    `chat`, if the caller already fetched it, saves re-running that lookup - but it's
+    never trusted blindly: it must actually match (chat_id, user_id), or this raises
+    exactly as if no chat had been found, same as a fresh get_chat() would. `include_total`
+    skips the COUNT(*) for a caller (the chat detail route) that doesn't use it.
+    """
+    if chat is not None:
+        if chat.id != chat_id or chat.user_id != user_id:
+            raise NotFoundError("chat not found")
+    else:
+        await get_chat(session, user_id=user_id, chat_id=chat_id)
+
+    total = 0
+    if include_total:
+        total = (
+            await session.scalar(
+                select(func.count()).select_from(Message).where(Message.chat_id == chat_id)
+            )
+            or 0
+        )
+
     stmt = (
         select(Message)
         .where(Message.chat_id == chat_id)
@@ -79,7 +97,7 @@ async def list_messages(
     if limit is not None:
         stmt = stmt.limit(limit)
     result = await session.scalars(stmt)
-    return list(result.all()), total or 0
+    return list(result.all()), total
 
 
 async def add_message(

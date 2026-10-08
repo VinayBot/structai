@@ -55,7 +55,9 @@ async def get_chat(
     session: AsyncSession = Depends(get_session),
 ) -> ChatDetailResponse:
     chat = await chat_service.get_chat(session, user_id=user.id, chat_id=chat_id)
-    messages, _total = await chat_service.list_messages(session, user_id=user.id, chat_id=chat_id)
+    messages, _total = await chat_service.list_messages(
+        session, user_id=user.id, chat_id=chat_id, chat=chat, include_total=False
+    )
     return ChatDetailResponse(
         id=chat.id,
         title=chat.title,
