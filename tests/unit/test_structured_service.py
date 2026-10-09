@@ -83,6 +83,47 @@ async def test_retries_after_invalid_json_then_succeeds():
 
 
 @pytest.mark.asyncio
+async def test_self_repair_loop_works_with_an_enum_type():
+    """A model picking a value outside the declared enum choices must trigger the
+    same retry-with-feedback loop as any other validation failure - no special
+    casing needed for the new field types, since they raise standard
+    pydantic.ValidationError just like the original six."""
+    schema = SchemaDef(fields=[FieldDef(name="color", type="enum", choices=["red", "green"])])
+    provider = FakeProvider(responses=['{"color": "purple"}', '{"color": "red"}'])
+
+    result = await structured_service.answer(
+        _gateway(provider), prompt="pick a color", schema=schema, max_attempts=3
+    )
+
+    assert result.data == {"color": "red"}
+    assert result.attempts == 2
+    assert provider.calls == 2
+
+
+@pytest.mark.asyncio
+async def test_self_repair_loop_works_with_a_nested_object_and_pattern_constraint():
+    schema = SchemaDef(
+        fields=[
+            FieldDef(
+                name="ticket",
+                type="object",
+                fields=[FieldDef(name="code", type="string", pattern=r"^[A-Z]{3}-\d{4}$")],
+            )
+        ]
+    )
+    provider = FakeProvider(
+        responses=['{"ticket": {"code": "not-matching"}}', '{"ticket": {"code": "ABC-1234"}}']
+    )
+
+    result = await structured_service.answer(
+        _gateway(provider), prompt="file a ticket", schema=schema, max_attempts=3
+    )
+
+    assert result.data == {"ticket": {"code": "ABC-1234"}}
+    assert result.attempts == 2
+
+
+@pytest.mark.asyncio
 async def test_rejects_extra_fields_and_retries():
     provider = FakeProvider(
         responses=['{"title": "hi", "unexpected": "nope"}', '{"title": "hello"}']
