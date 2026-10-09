@@ -429,8 +429,13 @@ export function EvaluationPage() {
               No evaluation runs yet
             </p>
             <p className="eval-text-dim text-xs">Run the golden-case suite above to populate this dashboard.</p>
+            {/* Same action as the toolbar's "Run N case(s)" button above - deliberately
+                different, static text. Both render at once whenever history is empty, and
+                two buttons with an identical accessible name on one page is a real
+                ambiguity (for assistive tech and for Playwright's getByRole alike), not
+                just a test-matching inconvenience. */}
             <Button onClick={() => void run()} disabled={running || selected.size === 0}>
-              Run {selected.size} case(s)
+              Run now
             </Button>
           </div>
         )}
